@@ -86,7 +86,7 @@ public class CsvDataStore extends AbstractDataStore {
     public String[] csvFileSuffixs = new String[] { ".csv", ".tsv" };
 
     protected String getName() {
-        return "CSV";
+        return this.getClass().getSimpleName();
     }
     
     protected List<File> getCsvFileList(final Map<String, String> paramMap) {

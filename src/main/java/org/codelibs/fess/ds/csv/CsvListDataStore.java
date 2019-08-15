@@ -41,7 +41,7 @@ public class CsvListDataStore extends CsvDataStore {
     public boolean ignoreDataStoreException = true;
 
     protected String getName() {
-        return "CSVList";
+        return this.getClass().getSimpleName();
     }
 
     @Override
