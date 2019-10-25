@@ -122,7 +122,7 @@ public class CsvDataStore extends AbstractDataStore {
             }
         }
         if (fileList.isEmpty() && logger.isDebugEnabled()) {
-            logger.debug("No csv files in " + value);
+            logger.debug("No csv files in {}", value);
         }
         return fileList;
     }
