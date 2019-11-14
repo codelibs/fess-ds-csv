@@ -226,7 +226,7 @@ public class CsvDataStore extends AbstractDataStore {
 
                 if (logger.isDebugEnabled()) {
                     for (final Map.Entry<String, Object> entry : resultMap.entrySet()) {
-                        logger.debug(entry.getKey() + "=" + entry.getValue());
+                        logger.debug("{}={}", entry.getKey(), entry.getValue());
                     }
                 }
 
@@ -242,7 +242,7 @@ public class CsvDataStore extends AbstractDataStore {
 
                 if (logger.isDebugEnabled()) {
                     for (final Map.Entry<String, Object> entry : dataMap.entrySet()) {
-                        logger.debug(entry.getKey() + "=" + entry.getValue());
+                        logger.debug("{}={}", entry.getKey(), entry.getValue());
                     }
                 }
 
