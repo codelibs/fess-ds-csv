@@ -49,37 +49,40 @@ import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvReader;
 
 public class CsvDataStore extends AbstractDataStore {
+
     private static final Logger logger = LoggerFactory.getLogger(CsvDataStore.class);
 
-    protected static final String ESCAPE_CHARACTER_PARAM = "escapeCharacter";
+    protected static final String ESCAPE_CHARACTER_PARAM = "escape_character";
 
-    protected static final String QUOTE_CHARACTER_PARAM = "quoteCharacter";
+    protected static final String QUOTE_CHARACTER_PARAM = "quote_character";
 
-    protected static final String SEPARATOR_CHARACTER_PARAM = "separatorCharacter";
+    protected static final String SEPARATOR_CHARACTER_PARAM = "separator_character";
 
-    protected static final String SKIP_LINES_PARAM = "skipLines";
+    protected static final String SKIP_LINES_PARAM = "skip_lines";
 
-    protected static final String IGNORE_LINE_PATTERNS_PARAM = "ignoreLinePatterns";
+    protected static final String IGNORE_LINE_PATTERNS_PARAM = "ignore_line_patterns";
 
-    protected static final String IGNORE_EMPTY_LINES_PARAM = "ignoreEmptyLines";
+    protected static final String IGNORE_EMPTY_LINES_PARAM = "ignore_empty_lines";
 
-    protected static final String IGNORE_TRAILING_WHITESPACES_PARAM = "ignoreTrailingWhitespaces";
+    protected static final String IGNORE_TRAILING_WHITESPACES_PARAM = "ignore_trailing_whitespaces";
 
-    protected static final String IGNORE_LEADING_WHITESPACES_PARAM = "ignoreLeadingWhitespaces";
+    protected static final String IGNORE_LEADING_WHITESPACES_PARAM = "ignore_leading_whitespaces";
 
-    protected static final String NULL_STRING_PARAM = "nullString";
+    protected static final String NULL_STRING_PARAM = "null_string";
 
-    protected static final String BREAK_STRING_PARAM = "breakString";
+    protected static final String BREAK_STRING_PARAM = "break_string";
 
-    protected static final String ESCAPE_DISABLED_PARAM = "escapeDisabled";
+    protected static final String ESCAPE_DISABLED_PARAM = "escape_disabled";
 
-    protected static final String QUOTE_DISABLED_PARAM = "quoteDisabled";
+    protected static final String QUOTE_DISABLED_PARAM = "quote_disabled";
 
-    protected static final String CSV_FILE_ENCODING_PARAM = "fileEncoding";
+    protected static final String CSV_FILE_ENCODING_PARAM = "file_encoding";
 
     protected static final String CSV_FILES_PARAM = "files";
 
     protected static final String CSV_DIRS_PARAM = "directories";
+
+    protected static final String HAS_HEADER_LINE_PARAM = "has_header_line";
 
     protected static final String CELL_PREFIX = "cell";
 
@@ -146,7 +149,7 @@ public class CsvDataStore extends AbstractDataStore {
     }
 
     protected boolean hasHeaderLine(final Map<String, String> paramMap) {
-        final String value = paramMap.get("hasHeaderLine");
+        final String value = paramMap.get(HAS_HEADER_LINE_PARAM);
         if (StringUtil.isBlank(value)) {
             return false;
         }
@@ -183,6 +186,7 @@ public class CsvDataStore extends AbstractDataStore {
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap, final CsvConfig csvConfig, final File csvFile,
             final long readInterval, final String csvFileEncoding, final boolean hasHeaderLine) {
         logger.info("Loading " + csvFile.getAbsolutePath());
+        final String scriptType = getScriptType(paramMap);
         CsvReader csvReader = null;
         try {
             csvReader = new CsvReader(new BufferedReader(new InputStreamReader(new FileInputStream(csvFile), csvFileEncoding)), csvConfig);
@@ -234,7 +238,7 @@ public class CsvDataStore extends AbstractDataStore {
                 crawlingContext.put("doc", dataMap);
                 resultMap.put("crawlingContext", crawlingContext);
                 for (final Map.Entry<String, String> entry : scriptMap.entrySet()) {
-                    final Object convertValue = convertValue(entry.getValue(), resultMap);
+                    final Object convertValue = convertValue(scriptType, entry.getValue(), resultMap);
                     if (convertValue != null) {
                         dataMap.put(entry.getKey(), convertValue);
                     }
@@ -306,7 +310,7 @@ public class CsvDataStore extends AbstractDataStore {
                 try {
                     csvConfig.setSeparator(StringEscapeUtils.unescapeJava(value).charAt(0));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + SEPARATOR_CHARACTER_PARAM, e);
+                    logger.warn("Failed to load {}", SEPARATOR_CHARACTER_PARAM, e);
                 }
             }
         }
@@ -317,7 +321,7 @@ public class CsvDataStore extends AbstractDataStore {
                 try {
                     csvConfig.setQuote(value.charAt(0));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + QUOTE_CHARACTER_PARAM, e);
+                    logger.warn("Failed to load {}", QUOTE_CHARACTER_PARAM, e);
                 }
             }
         }
@@ -328,7 +332,7 @@ public class CsvDataStore extends AbstractDataStore {
                 try {
                     csvConfig.setEscape(value.charAt(0));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + ESCAPE_CHARACTER_PARAM, e);
+                    logger.warn("Failed to load {}", ESCAPE_CHARACTER_PARAM, e);
                 }
             }
         }
@@ -340,7 +344,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // デフォルトでは無効となっている囲み文字を有効にします。
                     csvConfig.setQuoteDisabled(Boolean.parseBoolean(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + QUOTE_DISABLED_PARAM, e);
+                    logger.warn("Failed to load {}", QUOTE_DISABLED_PARAM, e);
                 }
             }
         }
@@ -352,7 +356,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // デフォルトでは無効となっているエスケープ文字を有効にします。
                     csvConfig.setEscapeDisabled(Boolean.parseBoolean(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + ESCAPE_DISABLED_PARAM, e);
+                    logger.warn("Failed to load {}", ESCAPE_DISABLED_PARAM, e);
                 }
             }
         }
@@ -380,7 +384,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // 項目値前のホワイトスペースを除去します。
                     csvConfig.setIgnoreLeadingWhitespaces(Boolean.parseBoolean(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + IGNORE_LEADING_WHITESPACES_PARAM, e);
+                    logger.warn("Failed to load {}", IGNORE_LEADING_WHITESPACES_PARAM, e);
                 }
             }
         }
@@ -392,7 +396,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // 項目値後のホワイトスペースを除去します。
                     csvConfig.setIgnoreTrailingWhitespaces(Boolean.parseBoolean(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + IGNORE_TRAILING_WHITESPACES_PARAM, e);
+                    logger.warn("Failed to load {}", IGNORE_TRAILING_WHITESPACES_PARAM, e);
                 }
             }
         }
@@ -404,7 +408,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // 空行を無視するようにします。
                     csvConfig.setIgnoreEmptyLines(Boolean.parseBoolean(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + IGNORE_EMPTY_LINES_PARAM, e);
+                    logger.warn("Failed to load {}", IGNORE_EMPTY_LINES_PARAM, e);
                 }
             }
         }
@@ -424,7 +428,7 @@ public class CsvDataStore extends AbstractDataStore {
                     // 最初の1行目をスキップして読込みます。
                     csvConfig.setSkipLines(Integer.parseInt(value));
                 } catch (final Exception e) {
-                    logger.warn("Failed to load " + SKIP_LINES_PARAM, e);
+                    logger.warn("Failed to load {}", SKIP_LINES_PARAM, e);
                 }
             }
         }
