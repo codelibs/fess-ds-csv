@@ -91,7 +91,7 @@ public class CsvDataStore extends AbstractDataStore {
     protected String getName() {
         return this.getClass().getSimpleName();
     }
-    
+
     protected List<File> getCsvFileList(final Map<String, String> paramMap) {
         String value = paramMap.get(CSV_FILES_PARAM);
         final List<File> fileList = new ArrayList<>();
@@ -105,9 +105,8 @@ public class CsvDataStore extends AbstractDataStore {
             for (final String path : values) {
                 final File dir = new File(path);
                 if (dir.isDirectory()) {
-                    stream(dir.listFiles()).of(
-                            stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName()))
-                                    .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified())).forEach(f -> fileList.add(f)));
+                    stream(dir.listFiles()).of(stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName()))
+                            .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified())).forEach(f -> fileList.add(f)));
                 } else {
                     logger.warn(path + " is not a directory.");
                 }
