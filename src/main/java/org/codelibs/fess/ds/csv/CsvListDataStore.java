@@ -18,6 +18,7 @@ package org.codelibs.fess.ds.csv;
 import java.io.File;
 import java.util.Map;
 
+import org.codelibs.core.lang.StringUtil;
 import org.codelibs.fess.Constants;
 import org.codelibs.fess.crawler.client.CrawlerClientFactory;
 import org.codelibs.fess.ds.callback.FileListIndexUpdateCallbackImpl;
@@ -34,9 +35,11 @@ public class CsvListDataStore extends CsvDataStore {
 
     private static final Logger logger = LoggerFactory.getLogger(CsvListDataStore.class);
 
+    protected static final String TIMESTAMP_MARGIN = "timestamp_margin";
+
     public boolean deleteProcessedFile = true;
 
-    public long csvFileTimestampMargin = 60 * 1000L;// 1min
+    public long csvFileTimestampMargin = 10 * 1000L;// 10s
 
     public boolean ignoreDataStoreException = true;
 
@@ -45,13 +48,25 @@ public class CsvListDataStore extends CsvDataStore {
     }
 
     @Override
-    protected boolean isCsvFile(final File parentFile, final String filename) {
-        if (super.isCsvFile(parentFile, filename)) {
+    protected boolean isCsvFile(final File parentFile, final String filename, final Map<String, String> paramMap) {
+        if (super.isCsvFile(parentFile, filename, paramMap)) {
             final File file = new File(parentFile, filename);
             final long now = System.currentTimeMillis();
-            return now - file.lastModified() > csvFileTimestampMargin;
+            return now - file.lastModified() > getTimestampMargin(paramMap);
         }
         return false;
+    }
+
+    protected long getTimestampMargin(final Map<String, String> paramMap) {
+        final String value = paramMap.get(TIMESTAMP_MARGIN);
+        if (StringUtil.isNotBlank(value)) {
+            try {
+                return Long.parseLong(value);
+            } catch (NumberFormatException e) {
+                logger.warn("Invalid {}.", TIMESTAMP_MARGIN, e);
+            }
+        }
+        return csvFileTimestampMargin;
     }
 
     @Override

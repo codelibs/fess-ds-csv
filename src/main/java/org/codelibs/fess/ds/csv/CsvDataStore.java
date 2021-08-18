@@ -100,26 +100,26 @@ public class CsvDataStore extends AbstractDataStore {
             if (StringUtil.isBlank(value)) {
                 throw new DataStoreException(CSV_FILES_PARAM + " and " + CSV_DIRS_PARAM + " are blank.");
             }
-            logger.info(CSV_DIRS_PARAM + "=" + value);
+            logger.info("{}={}", CSV_DIRS_PARAM, value);
             final String[] values = value.split(",");
             for (final String path : values) {
                 final File dir = new File(path);
                 if (dir.isDirectory()) {
-                    stream(dir.listFiles()).of(stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName()))
+                    stream(dir.listFiles()).of(stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName(), paramMap))
                             .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified())).forEach(f -> fileList.add(f)));
                 } else {
-                    logger.warn(path + " is not a directory.");
+                    logger.warn("{} is not a directory.", path);
                 }
             }
         } else {
-            logger.info(CSV_FILES_PARAM + "=" + value);
+            logger.info("{}={}", CSV_FILES_PARAM, value);
             final String[] values = value.split(",");
             for (final String path : values) {
                 final File file = new File(path);
-                if (file.isFile() && isCsvFile(file.getParentFile(), file.getName())) {
+                if (file.isFile() && isCsvFile(file.getParentFile(), file.getName(), paramMap)) {
                     fileList.add(file);
                 } else {
-                    logger.warn(path + " is not found.");
+                    logger.warn("{} is not found.", path);
                 }
             }
         }
@@ -129,7 +129,7 @@ public class CsvDataStore extends AbstractDataStore {
         return fileList;
     }
 
-    protected boolean isCsvFile(final File parentFile, final String filename) {
+    protected boolean isCsvFile(final File parentFile, final String filename, final Map<String, String> paramMap) {
         final String name = filename.toLowerCase(Locale.ROOT);
         for (final String suffix : csvFileSuffixs) {
             if (name.endsWith(suffix)) {
