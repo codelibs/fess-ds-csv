@@ -43,6 +43,7 @@ public class CsvListDataStore extends CsvDataStore {
 
     public boolean ignoreDataStoreException = true;
 
+    @Override
     protected String getName() {
         return this.getClass().getSimpleName();
     }
@@ -62,7 +63,7 @@ public class CsvListDataStore extends CsvDataStore {
         if (StringUtil.isNotBlank(value)) {
             try {
                 return Long.parseLong(value);
-            } catch (NumberFormatException e) {
+            } catch (final NumberFormatException e) {
                 logger.warn("Invalid {}.", TIMESTAMP_MARGIN, e);
             }
         }
@@ -105,14 +106,13 @@ public class CsvListDataStore extends CsvDataStore {
                 logger.warn("Failed to delete {}", csvFile.getAbsolutePath());
             }
         } catch (final DataStoreException e) {
-            if (ignoreDataStoreException) {
-                logger.error("Failed to process " + csvFile.getAbsolutePath(), e);
-                // rename csv file, or delete it if failed
-                if (!csvFile.renameTo(new File(csvFile.getParent(), csvFile.getName() + ".txt")) && !csvFile.delete()) {
-                    logger.warn("Failed to delete {}", csvFile.getAbsolutePath());
-                }
-            } else {
+            if (!ignoreDataStoreException) {
                 throw e;
+            }
+            logger.error("Failed to process " + csvFile.getAbsolutePath(), e);
+            // rename csv file, or delete it if failed
+            if (!csvFile.renameTo(new File(csvFile.getParent(), csvFile.getName() + ".txt")) && !csvFile.delete()) {
+                logger.warn("Failed to delete {}", csvFile.getAbsolutePath());
             }
         }
     }

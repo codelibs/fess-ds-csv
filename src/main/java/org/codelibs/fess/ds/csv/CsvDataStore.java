@@ -86,8 +86,9 @@ public class CsvDataStore extends AbstractDataStore {
 
     protected static final String CELL_PREFIX = "cell";
 
-    public String[] csvFileSuffixs = new String[] { ".csv", ".tsv" };
+    public String[] csvFileSuffixs = { ".csv", ".tsv" };
 
+    @Override
     protected String getName() {
         return this.getClass().getSimpleName();
     }
@@ -196,8 +197,7 @@ public class CsvDataStore extends AbstractDataStore {
             List<String> list;
             boolean loop = true;
             while ((list = csvReader.readValues()) != null && loop && alive) {
-                final Map<String, Object> dataMap = new HashMap<>();
-                dataMap.putAll(defaultDataMap);
+                final Map<String, Object> dataMap = new HashMap<>(defaultDataMap);
                 final Map<String, Object> resultMap = new LinkedHashMap<>();
                 resultMap.putAll(paramMap);
                 resultMap.put("csvfile", csvFile.getAbsolutePath());
