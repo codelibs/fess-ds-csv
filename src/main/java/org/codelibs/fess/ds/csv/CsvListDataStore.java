@@ -23,6 +23,7 @@ import org.codelibs.fess.Constants;
 import org.codelibs.fess.crawler.client.CrawlerClientFactory;
 import org.codelibs.fess.ds.callback.FileListIndexUpdateCallbackImpl;
 import org.codelibs.fess.ds.callback.IndexUpdateCallback;
+import org.codelibs.fess.entity.DataStoreParams;
 import org.codelibs.fess.es.config.exentity.DataConfig;
 import org.codelibs.fess.exception.DataStoreException;
 import org.codelibs.fess.util.ComponentUtil;
@@ -49,7 +50,7 @@ public class CsvListDataStore extends CsvDataStore {
     }
 
     @Override
-    protected boolean isCsvFile(final File parentFile, final String filename, final Map<String, String> paramMap) {
+    protected boolean isCsvFile(final File parentFile, final String filename, final DataStoreParams paramMap) {
         if (super.isCsvFile(parentFile, filename, paramMap)) {
             final File file = new File(parentFile, filename);
             final long now = System.currentTimeMillis();
@@ -58,8 +59,8 @@ public class CsvListDataStore extends CsvDataStore {
         return false;
     }
 
-    protected long getTimestampMargin(final Map<String, String> paramMap) {
-        final String value = paramMap.get(TIMESTAMP_MARGIN);
+    protected long getTimestampMargin(final DataStoreParams paramMap) {
+        final String value = paramMap.getAsString(TIMESTAMP_MARGIN);
         if (StringUtil.isNotBlank(value)) {
             try {
                 return Long.parseLong(value);
@@ -71,12 +72,12 @@ public class CsvListDataStore extends CsvDataStore {
     }
 
     @Override
-    protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final Map<String, String> paramMap,
+    protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap) {
         int nThreads = 1;
         if (paramMap.containsKey(Constants.NUM_OF_THREADS)) {
             try {
-                nThreads = Integer.parseInt(paramMap.get(Constants.NUM_OF_THREADS));
+                nThreads = Integer.parseInt(paramMap.getAsString(Constants.NUM_OF_THREADS, "1"));
             } catch (final NumberFormatException e) {
                 logger.warn(Constants.NUM_OF_THREADS + " is not int value.", e);
             }
@@ -94,7 +95,7 @@ public class CsvListDataStore extends CsvDataStore {
     }
 
     @Override
-    protected void processCsv(final DataConfig dataConfig, final IndexUpdateCallback callback, final Map<String, String> paramMap,
+    protected void processCsv(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap, final CsvConfig csvConfig, final File csvFile,
             final long readInterval, final String csvFileEncoding, final boolean hasHeaderLine) {
         try {

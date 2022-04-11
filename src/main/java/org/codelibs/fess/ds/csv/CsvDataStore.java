@@ -38,9 +38,12 @@ import org.codelibs.fess.crawler.exception.CrawlingAccessException;
 import org.codelibs.fess.crawler.exception.MultipleCrawlingAccessException;
 import org.codelibs.fess.ds.AbstractDataStore;
 import org.codelibs.fess.ds.callback.IndexUpdateCallback;
+import org.codelibs.fess.entity.DataStoreParams;
 import org.codelibs.fess.es.config.exentity.DataConfig;
 import org.codelibs.fess.exception.DataStoreCrawlingException;
 import org.codelibs.fess.exception.DataStoreException;
+import org.codelibs.fess.helper.CrawlerStatsHelper;
+import org.codelibs.fess.helper.CrawlerStatsHelper.StatsKeyObject;
 import org.codelibs.fess.util.ComponentUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,11 +96,11 @@ public class CsvDataStore extends AbstractDataStore {
         return this.getClass().getSimpleName();
     }
 
-    protected List<File> getCsvFileList(final Map<String, String> paramMap) {
-        String value = paramMap.get(CSV_FILES_PARAM);
+    protected List<File> getCsvFileList(final DataStoreParams paramMap) {
+        String value = paramMap.getAsString(CSV_FILES_PARAM);
         final List<File> fileList = new ArrayList<>();
         if (StringUtil.isBlank(value)) {
-            value = paramMap.get(CSV_DIRS_PARAM);
+            value = paramMap.getAsString(CSV_DIRS_PARAM);
             if (StringUtil.isBlank(value)) {
                 throw new DataStoreException(CSV_FILES_PARAM + " and " + CSV_DIRS_PARAM + " are blank.");
             }
@@ -130,7 +133,7 @@ public class CsvDataStore extends AbstractDataStore {
         return fileList;
     }
 
-    protected boolean isCsvFile(final File parentFile, final String filename, final Map<String, String> paramMap) {
+    protected boolean isCsvFile(final File parentFile, final String filename, final DataStoreParams paramMap) {
         final String name = filename.toLowerCase(Locale.ROOT);
         for (final String suffix : csvFileSuffixs) {
             if (name.endsWith(suffix)) {
@@ -140,16 +143,16 @@ public class CsvDataStore extends AbstractDataStore {
         return false;
     }
 
-    protected String getCsvFileEncoding(final Map<String, String> paramMap) {
-        final String value = paramMap.get(CSV_FILE_ENCODING_PARAM);
+    protected String getCsvFileEncoding(final DataStoreParams paramMap) {
+        final String value = paramMap.getAsString(CSV_FILE_ENCODING_PARAM);
         if (StringUtil.isBlank(value)) {
             return Constants.UTF_8;
         }
         return value;
     }
 
-    protected boolean hasHeaderLine(final Map<String, String> paramMap) {
-        final String value = paramMap.get(HAS_HEADER_LINE_PARAM);
+    protected boolean hasHeaderLine(final DataStoreParams paramMap) {
+        final String value = paramMap.getAsString(HAS_HEADER_LINE_PARAM);
         if (StringUtil.isBlank(value)) {
             return false;
         }
@@ -161,7 +164,7 @@ public class CsvDataStore extends AbstractDataStore {
     }
 
     @Override
-    protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final Map<String, String> paramMap,
+    protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap) {
 
         final long readInterval = getReadInterval(paramMap);
@@ -182,10 +185,11 @@ public class CsvDataStore extends AbstractDataStore {
         }
     }
 
-    protected void processCsv(final DataConfig dataConfig, final IndexUpdateCallback callback, final Map<String, String> paramMap,
+    protected void processCsv(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap, final CsvConfig csvConfig, final File csvFile,
             final long readInterval, final String csvFileEncoding, final boolean hasHeaderLine) {
-        logger.info("Loading " + csvFile.getAbsolutePath());
+        logger.info("Loading {}", csvFile.getAbsolutePath());
+        final CrawlerStatsHelper crawlerStatsHelper = ComponentUtil.getCrawlerStatsHelper();
         final String scriptType = getScriptType(paramMap);
         CsvReader csvReader = null;
         try {
@@ -197,60 +201,72 @@ public class CsvDataStore extends AbstractDataStore {
             List<String> list;
             boolean loop = true;
             while ((list = csvReader.readValues()) != null && loop && alive) {
+                final StatsKeyObject keyObj = new StatsKeyObject(csvFile.getAbsolutePath() + "#" + csvReader.getLineNumber());
+                paramMap.put(Constants.CRAWLER_STATS_KEY, keyObj);
                 final Map<String, Object> dataMap = new HashMap<>(defaultDataMap);
                 final Map<String, Object> resultMap = new LinkedHashMap<>();
-                resultMap.putAll(paramMap);
-                resultMap.put("csvfile", csvFile.getAbsolutePath());
-                resultMap.put("csvfilename", csvFile.getName());
-                resultMap.put("crawlingConfig", dataConfig);
-                boolean foundValues = false;
-                for (int i = 0; i < list.size(); i++) {
-                    String key = null;
-                    String value = list.get(i);
-                    if (value == null) {
-                        value = StringUtil.EMPTY;
+                try {
+                    crawlerStatsHelper.begin(keyObj);
+                    resultMap.putAll(paramMap.asMap());
+                    resultMap.put("csvfile", csvFile.getAbsolutePath());
+                    resultMap.put("csvfilename", csvFile.getName());
+                    resultMap.put("crawlingConfig", dataConfig);
+                    boolean foundValues = false;
+                    for (int i = 0; i < list.size(); i++) {
+                        String key = null;
+                        String value = list.get(i);
+                        if (value == null) {
+                            value = StringUtil.EMPTY;
+                        }
+                        if (StringUtil.isNotBlank(value)) {
+                            foundValues = true;
+                        }
+                        if (headerList != null && headerList.size() > i) {
+                            key = headerList.get(i);
+                            if (StringUtil.isNotBlank(key)) {
+                                resultMap.put(key, value);
+                            }
+                        }
+                        key = CELL_PREFIX + Integer.toString(i + 1);
+                        resultMap.put(key, value);
                     }
-                    if (StringUtil.isNotBlank(value)) {
-                        foundValues = true;
+                    if (!foundValues) {
+                        logger.debug("No data in line: {}", resultMap);
+                        continue;
                     }
-                    if (headerList != null && headerList.size() > i) {
-                        key = headerList.get(i);
-                        if (StringUtil.isNotBlank(key)) {
-                            resultMap.put(key, value);
+
+                    crawlerStatsHelper.record(keyObj, "parsed");
+
+                    if (logger.isDebugEnabled()) {
+                        for (final Map.Entry<String, Object> entry : resultMap.entrySet()) {
+                            logger.debug("{}={}", entry.getKey(), entry.getValue());
                         }
                     }
-                    key = CELL_PREFIX + Integer.toString(i + 1);
-                    resultMap.put(key, value);
-                }
-                if (!foundValues) {
-                    logger.debug("No data in line: {}", resultMap);
-                    continue;
-                }
 
-                if (logger.isDebugEnabled()) {
-                    for (final Map.Entry<String, Object> entry : resultMap.entrySet()) {
-                        logger.debug("{}={}", entry.getKey(), entry.getValue());
+                    final Map<String, Object> crawlingContext = new HashMap<>();
+                    crawlingContext.put("doc", dataMap);
+                    resultMap.put("crawlingContext", crawlingContext);
+                    for (final Map.Entry<String, String> entry : scriptMap.entrySet()) {
+                        final Object convertValue = convertValue(scriptType, entry.getValue(), resultMap);
+                        if (convertValue != null) {
+                            dataMap.put(entry.getKey(), convertValue);
+                        }
                     }
-                }
 
-                final Map<String, Object> crawlingContext = new HashMap<>();
-                crawlingContext.put("doc", dataMap);
-                resultMap.put("crawlingContext", crawlingContext);
-                for (final Map.Entry<String, String> entry : scriptMap.entrySet()) {
-                    final Object convertValue = convertValue(scriptType, entry.getValue(), resultMap);
-                    if (convertValue != null) {
-                        dataMap.put(entry.getKey(), convertValue);
+                    crawlerStatsHelper.record(keyObj, "evaluated");
+
+                    if (logger.isDebugEnabled()) {
+                        for (final Map.Entry<String, Object> entry : dataMap.entrySet()) {
+                            logger.debug("{}={}", entry.getKey(), entry.getValue());
+                        }
                     }
-                }
 
-                if (logger.isDebugEnabled()) {
-                    for (final Map.Entry<String, Object> entry : dataMap.entrySet()) {
-                        logger.debug("{}={}", entry.getKey(), entry.getValue());
+                    if (dataMap.get("url") instanceof String url) {
+                        keyObj.setUrl(url);
                     }
-                }
 
-                try {
                     callback.store(paramMap, dataMap);
+                    crawlerStatsHelper.record(keyObj, "finished");
                 } catch (final CrawlingAccessException e) {
                     logger.warn("Crawling Access Exception at : " + dataMap, e);
 
@@ -282,11 +298,15 @@ public class CsvDataStore extends AbstractDataStore {
                     }
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, errorName, url, target);
+                    crawlerStatsHelper.record(keyObj, "access_exception");
                 } catch (final Throwable t) {
                     logger.warn("Crawling Access Exception at : " + dataMap, t);
                     final String url = csvFile.getAbsolutePath() + ":" + csvReader.getLineNumber();
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, t.getClass().getCanonicalName(), url, t);
+                    crawlerStatsHelper.record(keyObj, "exception");
+                } finally {
+                    crawlerStatsHelper.done(keyObj);
                 }
 
                 if (readInterval > 0) {
@@ -300,11 +320,11 @@ public class CsvDataStore extends AbstractDataStore {
         }
     }
 
-    protected CsvConfig buildCsvConfig(final Map<String, String> paramMap) {
+    protected CsvConfig buildCsvConfig(final DataStoreParams paramMap) {
         final CsvConfig csvConfig = new CsvConfig();
 
         if (paramMap.containsKey(SEPARATOR_CHARACTER_PARAM)) {
-            final String value = paramMap.get(SEPARATOR_CHARACTER_PARAM);
+            final String value = paramMap.getAsString(SEPARATOR_CHARACTER_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     csvConfig.setSeparator(StringEscapeUtils.unescapeJava(value).charAt(0));
@@ -315,7 +335,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(QUOTE_CHARACTER_PARAM)) {
-            final String value = paramMap.get(QUOTE_CHARACTER_PARAM);
+            final String value = paramMap.getAsString(QUOTE_CHARACTER_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     csvConfig.setQuote(value.charAt(0));
@@ -326,7 +346,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(ESCAPE_CHARACTER_PARAM)) {
-            final String value = paramMap.get(ESCAPE_CHARACTER_PARAM);
+            final String value = paramMap.getAsString(ESCAPE_CHARACTER_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     csvConfig.setEscape(value.charAt(0));
@@ -337,7 +357,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(QUOTE_DISABLED_PARAM)) {
-            final String value = paramMap.get(QUOTE_DISABLED_PARAM);
+            final String value = paramMap.getAsString(QUOTE_DISABLED_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // デフォルトでは無効となっている囲み文字を有効にします。
@@ -349,7 +369,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(ESCAPE_DISABLED_PARAM)) {
-            final String value = paramMap.get(ESCAPE_DISABLED_PARAM);
+            final String value = paramMap.getAsString(ESCAPE_DISABLED_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // デフォルトでは無効となっているエスケープ文字を有効にします。
@@ -361,7 +381,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(BREAK_STRING_PARAM)) {
-            final String value = paramMap.get(BREAK_STRING_PARAM);
+            final String value = paramMap.getAsString(BREAK_STRING_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 // 項目値中の改行を \n で置換えます。
                 csvConfig.setBreakString(value);
@@ -369,7 +389,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(NULL_STRING_PARAM)) {
-            final String value = paramMap.get(NULL_STRING_PARAM);
+            final String value = paramMap.getAsString(NULL_STRING_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 // null 値扱いする文字列を指定します。
                 csvConfig.setNullString(value);
@@ -377,7 +397,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(IGNORE_LEADING_WHITESPACES_PARAM)) {
-            final String value = paramMap.get(IGNORE_LEADING_WHITESPACES_PARAM);
+            final String value = paramMap.getAsString(IGNORE_LEADING_WHITESPACES_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // 項目値前のホワイトスペースを除去します。
@@ -389,7 +409,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(IGNORE_TRAILING_WHITESPACES_PARAM)) {
-            final String value = paramMap.get(IGNORE_TRAILING_WHITESPACES_PARAM);
+            final String value = paramMap.getAsString(IGNORE_TRAILING_WHITESPACES_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // 項目値後のホワイトスペースを除去します。
@@ -401,7 +421,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(IGNORE_EMPTY_LINES_PARAM)) {
-            final String value = paramMap.get(IGNORE_EMPTY_LINES_PARAM);
+            final String value = paramMap.getAsString(IGNORE_EMPTY_LINES_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // 空行を無視するようにします。
@@ -413,7 +433,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(IGNORE_LINE_PATTERNS_PARAM)) {
-            final String value = paramMap.get(IGNORE_LINE_PATTERNS_PARAM);
+            final String value = paramMap.getAsString(IGNORE_LINE_PATTERNS_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 // 正規表現による無視する行パターンを設定します。(この例では # で始まる行)
                 csvConfig.setIgnoreLinePatterns(Pattern.compile(value));
@@ -421,7 +441,7 @@ public class CsvDataStore extends AbstractDataStore {
         }
 
         if (paramMap.containsKey(SKIP_LINES_PARAM)) {
-            final String value = paramMap.get(SKIP_LINES_PARAM);
+            final String value = paramMap.getAsString(SKIP_LINES_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 try {
                     // 最初の1行目をスキップして読込みます。
