@@ -43,6 +43,7 @@ import org.codelibs.fess.es.config.exentity.DataConfig;
 import org.codelibs.fess.exception.DataStoreCrawlingException;
 import org.codelibs.fess.exception.DataStoreException;
 import org.codelibs.fess.helper.CrawlerStatsHelper;
+import org.codelibs.fess.helper.CrawlerStatsHelper.StatsAction;
 import org.codelibs.fess.helper.CrawlerStatsHelper.StatsKeyObject;
 import org.codelibs.fess.util.ComponentUtil;
 import org.slf4j.Logger;
@@ -235,7 +236,7 @@ public class CsvDataStore extends AbstractDataStore {
                         continue;
                     }
 
-                    crawlerStatsHelper.record(keyObj, "parsed");
+                    crawlerStatsHelper.record(keyObj, StatsAction.PREPARED);
 
                     if (logger.isDebugEnabled()) {
                         for (final Map.Entry<String, Object> entry : resultMap.entrySet()) {
@@ -253,7 +254,7 @@ public class CsvDataStore extends AbstractDataStore {
                         }
                     }
 
-                    crawlerStatsHelper.record(keyObj, "evaluated");
+                    crawlerStatsHelper.record(keyObj, StatsAction.EVALUATED);
 
                     if (logger.isDebugEnabled()) {
                         for (final Map.Entry<String, Object> entry : dataMap.entrySet()) {
@@ -266,7 +267,7 @@ public class CsvDataStore extends AbstractDataStore {
                     }
 
                     callback.store(paramMap, dataMap);
-                    crawlerStatsHelper.record(keyObj, "finished");
+                    crawlerStatsHelper.record(keyObj, StatsAction.FINISHED);
                 } catch (final CrawlingAccessException e) {
                     logger.warn("Crawling Access Exception at : " + dataMap, e);
 
@@ -298,13 +299,13 @@ public class CsvDataStore extends AbstractDataStore {
                     }
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, errorName, url, target);
-                    crawlerStatsHelper.record(keyObj, "access_exception");
+                    crawlerStatsHelper.record(keyObj, StatsAction.ACCESS_EXCEPTION);
                 } catch (final Throwable t) {
                     logger.warn("Crawling Access Exception at : " + dataMap, t);
                     final String url = csvFile.getAbsolutePath() + ":" + csvReader.getLineNumber();
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, t.getClass().getCanonicalName(), url, t);
-                    crawlerStatsHelper.record(keyObj, "exception");
+                    crawlerStatsHelper.record(keyObj, StatsAction.EXCEPTION);
                 } finally {
                     crawlerStatsHelper.done(keyObj);
                 }
