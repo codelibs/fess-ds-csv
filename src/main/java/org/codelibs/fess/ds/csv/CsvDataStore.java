@@ -233,6 +233,7 @@ public class CsvDataStore extends AbstractDataStore {
                     }
                     if (!foundValues) {
                         logger.debug("No data in line: {}", resultMap);
+                        crawlerStatsHelper.discard(keyObj);
                         continue;
                     }
 
