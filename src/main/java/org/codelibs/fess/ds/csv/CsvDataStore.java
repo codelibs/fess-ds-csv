@@ -202,12 +202,12 @@ public class CsvDataStore extends AbstractDataStore {
             List<String> list;
             boolean loop = true;
             while ((list = csvReader.readValues()) != null && loop && alive) {
-                final StatsKeyObject keyObj = new StatsKeyObject(csvFile.getAbsolutePath() + "#" + csvReader.getLineNumber());
-                paramMap.put(Constants.CRAWLER_STATS_KEY, keyObj);
+                final StatsKeyObject statsKey = new StatsKeyObject(csvFile.getAbsolutePath() + "#" + csvReader.getLineNumber());
+                paramMap.put(Constants.CRAWLER_STATS_KEY, statsKey);
                 final Map<String, Object> dataMap = new HashMap<>(defaultDataMap);
                 final Map<String, Object> resultMap = new LinkedHashMap<>();
                 try {
-                    crawlerStatsHelper.begin(keyObj);
+                    crawlerStatsHelper.begin(statsKey);
                     resultMap.putAll(paramMap.asMap());
                     resultMap.put("csvfile", csvFile.getAbsolutePath());
                     resultMap.put("csvfilename", csvFile.getName());
@@ -233,11 +233,11 @@ public class CsvDataStore extends AbstractDataStore {
                     }
                     if (!foundValues) {
                         logger.debug("No data in line: {}", resultMap);
-                        crawlerStatsHelper.discard(keyObj);
+                        crawlerStatsHelper.discard(statsKey);
                         continue;
                     }
 
-                    crawlerStatsHelper.record(keyObj, StatsAction.PREPARED);
+                    crawlerStatsHelper.record(statsKey, StatsAction.PREPARED);
 
                     if (logger.isDebugEnabled()) {
                         for (final Map.Entry<String, Object> entry : resultMap.entrySet()) {
@@ -255,7 +255,7 @@ public class CsvDataStore extends AbstractDataStore {
                         }
                     }
 
-                    crawlerStatsHelper.record(keyObj, StatsAction.EVALUATED);
+                    crawlerStatsHelper.record(statsKey, StatsAction.EVALUATED);
 
                     if (logger.isDebugEnabled()) {
                         for (final Map.Entry<String, Object> entry : dataMap.entrySet()) {
@@ -264,11 +264,11 @@ public class CsvDataStore extends AbstractDataStore {
                     }
 
                     if (dataMap.get("url") instanceof String url) {
-                        keyObj.setUrl(url);
+                        statsKey.setUrl(url);
                     }
 
                     callback.store(paramMap, dataMap);
-                    crawlerStatsHelper.record(keyObj, StatsAction.FINISHED);
+                    crawlerStatsHelper.record(statsKey, StatsAction.FINISHED);
                 } catch (final CrawlingAccessException e) {
                     logger.warn("Crawling Access Exception at : " + dataMap, e);
 
@@ -300,15 +300,15 @@ public class CsvDataStore extends AbstractDataStore {
                     }
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, errorName, url, target);
-                    crawlerStatsHelper.record(keyObj, StatsAction.ACCESS_EXCEPTION);
+                    crawlerStatsHelper.record(statsKey, StatsAction.ACCESS_EXCEPTION);
                 } catch (final Throwable t) {
                     logger.warn("Crawling Access Exception at : " + dataMap, t);
                     final String url = csvFile.getAbsolutePath() + ":" + csvReader.getLineNumber();
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, t.getClass().getCanonicalName(), url, t);
-                    crawlerStatsHelper.record(keyObj, StatsAction.EXCEPTION);
+                    crawlerStatsHelper.record(statsKey, StatsAction.EXCEPTION);
                 } finally {
-                    crawlerStatsHelper.done(keyObj);
+                    crawlerStatsHelper.done(statsKey);
                 }
 
                 if (readInterval > 0) {
