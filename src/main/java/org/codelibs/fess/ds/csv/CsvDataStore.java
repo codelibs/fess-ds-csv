@@ -263,18 +263,18 @@ public class CsvDataStore extends AbstractDataStore {
                         }
                     }
 
-                    if (dataMap.get("url") instanceof String url) {
+                    if (dataMap.get("url") instanceof final String url) {
                         statsKey.setUrl(url);
                     }
 
                     callback.store(paramMap, dataMap);
                     crawlerStatsHelper.record(statsKey, StatsAction.FINISHED);
                 } catch (final CrawlingAccessException e) {
-                    logger.warn("Crawling Access Exception at : " + dataMap, e);
+                    logger.warn("Crawling Access Exception at : {}", dataMap, e);
 
                     Throwable target = e;
-                    if (target instanceof MultipleCrawlingAccessException) {
-                        final Throwable[] causes = ((MultipleCrawlingAccessException) target).getCauses();
+                    if (target instanceof final MultipleCrawlingAccessException ex) {
+                        final Throwable[] causes = ex.getCauses();
                         if (causes.length > 0) {
                             target = causes[causes.length - 1];
                         }
@@ -289,8 +289,7 @@ public class CsvDataStore extends AbstractDataStore {
                     }
 
                     String url;
-                    if (target instanceof DataStoreCrawlingException) {
-                        final DataStoreCrawlingException dce = (DataStoreCrawlingException) target;
+                    if (target instanceof DataStoreCrawlingException dce) {
                         url = dce.getUrl();
                         if (dce.aborted()) {
                             loop = false;
@@ -302,7 +301,7 @@ public class CsvDataStore extends AbstractDataStore {
                     failureUrlService.store(dataConfig, errorName, url, target);
                     crawlerStatsHelper.record(statsKey, StatsAction.ACCESS_EXCEPTION);
                 } catch (final Throwable t) {
-                    logger.warn("Crawling Access Exception at : " + dataMap, t);
+                    logger.warn("Crawling Access Exception at : {}", dataMap, t);
                     final String url = csvFile.getAbsolutePath() + ":" + csvReader.getLineNumber();
                     final FailureUrlService failureUrlService = ComponentUtil.getComponent(FailureUrlService.class);
                     failureUrlService.store(dataConfig, t.getClass().getCanonicalName(), url, t);
