@@ -79,7 +79,7 @@ public class CsvListDataStore extends CsvDataStore {
             try {
                 nThreads = Integer.parseInt(paramMap.getAsString(Constants.NUM_OF_THREADS, "1"));
             } catch (final NumberFormatException e) {
-                logger.warn(Constants.NUM_OF_THREADS + " is not int value.", e);
+                logger.warn("{} is not int value.", Constants.NUM_OF_THREADS, e);
             }
         }
         final CrawlerClientFactory crawlerClientFactory = ComponentUtil.getCrawlerClientFactory();
@@ -110,7 +110,7 @@ public class CsvListDataStore extends CsvDataStore {
             if (!ignoreDataStoreException) {
                 throw e;
             }
-            logger.error("Failed to process " + csvFile.getAbsolutePath(), e);
+            logger.error("Failed to process {}", csvFile.getAbsolutePath(), e);
             // rename csv file, or delete it if failed
             if (!csvFile.renameTo(new File(csvFile.getParent(), csvFile.getName() + ".txt")) && !csvFile.delete()) {
                 logger.warn("Failed to delete {}", csvFile.getAbsolutePath());
