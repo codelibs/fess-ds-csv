@@ -18,6 +18,8 @@ package org.codelibs.fess.ds.csv;
 import java.io.File;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.core.lang.StringUtil;
 import org.codelibs.fess.Constants;
 import org.codelibs.fess.crawler.client.CrawlerClientFactory;
@@ -27,14 +29,12 @@ import org.codelibs.fess.entity.DataStoreParams;
 import org.codelibs.fess.es.config.exentity.DataConfig;
 import org.codelibs.fess.exception.DataStoreException;
 import org.codelibs.fess.util.ComponentUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.orangesignal.csv.CsvConfig;
 
 public class CsvListDataStore extends CsvDataStore {
 
-    private static final Logger logger = LoggerFactory.getLogger(CsvListDataStore.class);
+    private static final Logger logger = LogManager.getLogger(CsvListDataStore.class);
 
     protected static final String TIMESTAMP_MARGIN = "timestamp_margin";
 

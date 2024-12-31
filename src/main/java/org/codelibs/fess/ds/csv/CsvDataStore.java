@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.core.io.CloseableUtil;
 import org.codelibs.core.lang.StringUtil;
 import org.codelibs.fess.Constants;
@@ -46,15 +48,13 @@ import org.codelibs.fess.helper.CrawlerStatsHelper;
 import org.codelibs.fess.helper.CrawlerStatsHelper.StatsAction;
 import org.codelibs.fess.helper.CrawlerStatsHelper.StatsKeyObject;
 import org.codelibs.fess.util.ComponentUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvReader;
 
 public class CsvDataStore extends AbstractDataStore {
 
-    private static final Logger logger = LoggerFactory.getLogger(CsvDataStore.class);
+    private static final Logger logger = LogManager.getLogger(CsvDataStore.class);
 
     protected static final String ESCAPE_CHARACTER_PARAM = "escape_character";
 
