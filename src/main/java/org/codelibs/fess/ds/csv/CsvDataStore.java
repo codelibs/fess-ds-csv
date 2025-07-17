@@ -52,51 +52,86 @@ import org.codelibs.fess.util.ComponentUtil;
 import com.orangesignal.csv.CsvConfig;
 import com.orangesignal.csv.CsvReader;
 
+/**
+ * CSV Data Store for Fess that reads CSV files and indexes them for search.
+ * Supports various CSV configurations including custom separators, encodings, and headers.
+ */
 public class CsvDataStore extends AbstractDataStore {
 
     private static final Logger logger = LogManager.getLogger(CsvDataStore.class);
 
+    /** Parameter name for CSV escape character. */
     protected static final String ESCAPE_CHARACTER_PARAM = "escape_character";
 
+    /** Parameter name for CSV quote character. */
     protected static final String QUOTE_CHARACTER_PARAM = "quote_character";
 
+    /** Parameter name for CSV separator character. */
     protected static final String SEPARATOR_CHARACTER_PARAM = "separator_character";
 
+    /** Parameter name for number of lines to skip. */
     protected static final String SKIP_LINES_PARAM = "skip_lines";
 
+    /** Parameter name for regex patterns to ignore lines. */
     protected static final String IGNORE_LINE_PATTERNS_PARAM = "ignore_line_patterns";
 
+    /** Parameter name for ignoring empty lines. */
     protected static final String IGNORE_EMPTY_LINES_PARAM = "ignore_empty_lines";
 
+    /** Parameter name for ignoring trailing whitespaces. */
     protected static final String IGNORE_TRAILING_WHITESPACES_PARAM = "ignore_trailing_whitespaces";
 
+    /** Parameter name for ignoring leading whitespaces. */
     protected static final String IGNORE_LEADING_WHITESPACES_PARAM = "ignore_leading_whitespaces";
 
+    /** Parameter name for null string representation. */
     protected static final String NULL_STRING_PARAM = "null_string";
 
+    /** Parameter name for line break string replacement. */
     protected static final String BREAK_STRING_PARAM = "break_string";
 
+    /** Parameter name for disabling escape characters. */
     protected static final String ESCAPE_DISABLED_PARAM = "escape_disabled";
 
+    /** Parameter name for disabling quote characters. */
     protected static final String QUOTE_DISABLED_PARAM = "quote_disabled";
 
+    /** Parameter name for CSV file encoding. */
     protected static final String CSV_FILE_ENCODING_PARAM = "file_encoding";
 
+    /** Parameter name for CSV file paths. */
     protected static final String CSV_FILES_PARAM = "files";
 
+    /** Parameter name for CSV directory paths. */
     protected static final String CSV_DIRS_PARAM = "directories";
 
+    /** Parameter name for indicating header line presence. */
     protected static final String HAS_HEADER_LINE_PARAM = "has_header_line";
 
+    /** Prefix for cell field names. */
     protected static final String CELL_PREFIX = "cell";
 
+    /** Supported CSV file suffixes. */
     public String[] csvFileSuffixs = { ".csv", ".tsv" };
+
+    /**
+     * Creates a new CSV Data Store instance.
+     */
+    public CsvDataStore() {
+        super();
+    }
 
     @Override
     protected String getName() {
         return this.getClass().getSimpleName();
     }
 
+    /**
+     * Gets the list of CSV files to process based on the provided parameters.
+     *
+     * @param paramMap the data store parameters
+     * @return list of CSV files to process
+     */
     protected List<File> getCsvFileList(final DataStoreParams paramMap) {
         String value = paramMap.getAsString(CSV_FILES_PARAM);
         final List<File> fileList = new ArrayList<>();
@@ -134,6 +169,14 @@ public class CsvDataStore extends AbstractDataStore {
         return fileList;
     }
 
+    /**
+     * Checks if the given file is a CSV file based on its extension.
+     *
+     * @param parentFile the parent directory
+     * @param filename the filename to check
+     * @param paramMap the data store parameters
+     * @return true if the file is a CSV file
+     */
     protected boolean isCsvFile(final File parentFile, final String filename, final DataStoreParams paramMap) {
         final String name = filename.toLowerCase(Locale.ROOT);
         for (final String suffix : csvFileSuffixs) {
@@ -144,6 +187,12 @@ public class CsvDataStore extends AbstractDataStore {
         return false;
     }
 
+    /**
+     * Gets the file encoding for CSV files.
+     *
+     * @param paramMap the data store parameters
+     * @return the file encoding (defaults to UTF-8)
+     */
     protected String getCsvFileEncoding(final DataStoreParams paramMap) {
         final String value = paramMap.getAsString(CSV_FILE_ENCODING_PARAM);
         if (StringUtil.isBlank(value)) {
@@ -152,6 +201,12 @@ public class CsvDataStore extends AbstractDataStore {
         return value;
     }
 
+    /**
+     * Checks if the CSV files have a header line.
+     *
+     * @param paramMap the data store parameters
+     * @return true if CSV files have header lines
+     */
     protected boolean hasHeaderLine(final DataStoreParams paramMap) {
         final String value = paramMap.getAsString(HAS_HEADER_LINE_PARAM);
         if (StringUtil.isBlank(value)) {
@@ -186,6 +241,20 @@ public class CsvDataStore extends AbstractDataStore {
         }
     }
 
+    /**
+     * Processes a single CSV file and indexes its data.
+     *
+     * @param dataConfig the data configuration
+     * @param callback the index update callback
+     * @param paramMap the data store parameters
+     * @param scriptMap the script mappings
+     * @param defaultDataMap the default data map
+     * @param csvConfig the CSV configuration
+     * @param csvFile the CSV file to process
+     * @param readInterval the read interval
+     * @param csvFileEncoding the file encoding
+     * @param hasHeaderLine whether the file has a header line
+     */
     protected void processCsv(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap, final CsvConfig csvConfig, final File csvFile,
             final long readInterval, final String csvFileEncoding, final boolean hasHeaderLine) {
@@ -321,6 +390,12 @@ public class CsvDataStore extends AbstractDataStore {
         }
     }
 
+    /**
+     * Builds CSV configuration based on the provided parameters.
+     *
+     * @param paramMap the data store parameters
+     * @return the configured CsvConfig object
+     */
     protected CsvConfig buildCsvConfig(final DataStoreParams paramMap) {
         final CsvConfig csvConfig = new CsvConfig();
 
