@@ -4,12 +4,12 @@
 	<artifactId>fess-ds-csv</artifactId>
 	<packaging>jar</packaging>
 	<name>CSV Data Store</name>
-	<version>15.1.0</version>
+	<version>15.1.1-SNAPSHOT</version>
 	<scm>
 		<connection>scm:git:git@github.com:codelibs/fess-ds-csv.git</connection>
 		<developerConnection>scm:git:git@github.com:codelibs/fess-ds-csv.git</developerConnection>
 		<url>https://github.com/codelibs/fess-ds-csv</url>
-	  <tag>fess-ds-csv-15.1.0</tag>
+	  <tag>HEAD</tag>
   </scm>
 	<parent>
 		<groupId>org.codelibs.fess</groupId>
