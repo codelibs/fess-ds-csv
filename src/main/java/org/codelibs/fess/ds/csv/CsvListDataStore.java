@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 CodeLibs Project and the Others.
+ * Copyright 2012-2025 CodeLibs Project and the Others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,46 @@ package org.codelibs.fess.ds.csv;
 import java.io.File;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.core.lang.StringUtil;
 import org.codelibs.fess.Constants;
 import org.codelibs.fess.crawler.client.CrawlerClientFactory;
 import org.codelibs.fess.ds.callback.FileListIndexUpdateCallbackImpl;
 import org.codelibs.fess.ds.callback.IndexUpdateCallback;
 import org.codelibs.fess.entity.DataStoreParams;
-import org.codelibs.fess.es.config.exentity.DataConfig;
 import org.codelibs.fess.exception.DataStoreException;
+import org.codelibs.fess.opensearch.config.exentity.DataConfig;
 import org.codelibs.fess.util.ComponentUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.orangesignal.csv.CsvConfig;
 
+/**
+ * Enhanced CSV Data Store with multi-threading and automatic file cleanup.
+ * Extends CsvDataStore with timestamp-based file filtering and processed file deletion.
+ */
 public class CsvListDataStore extends CsvDataStore {
 
-    private static final Logger logger = LoggerFactory.getLogger(CsvListDataStore.class);
+    private static final Logger logger = LogManager.getLogger(CsvListDataStore.class);
 
+    /** Parameter name for timestamp margin in milliseconds. */
     protected static final String TIMESTAMP_MARGIN = "timestamp_margin";
 
+    /** Whether to delete processed CSV files. */
     public boolean deleteProcessedFile = true;
 
-    public long csvFileTimestampMargin = 10 * 1000L;// 10s
+    /** Default timestamp margin for file filtering (10 seconds). */
+    public long csvFileTimestampMargin = 10 * 1000L;
 
+    /** Whether to ignore data store exceptions during processing. */
     public boolean ignoreDataStoreException = true;
+
+    /**
+     * Creates a new CSV List Data Store instance.
+     */
+    public CsvListDataStore() {
+        super();
+    }
 
     @Override
     protected String getName() {
@@ -59,6 +74,12 @@ public class CsvListDataStore extends CsvDataStore {
         return false;
     }
 
+    /**
+     * Gets the timestamp margin for file filtering.
+     *
+     * @param paramMap the data store parameters
+     * @return the timestamp margin in milliseconds
+     */
     protected long getTimestampMargin(final DataStoreParams paramMap) {
         final String value = paramMap.getAsString(TIMESTAMP_MARGIN);
         if (StringUtil.isNotBlank(value)) {
