@@ -146,7 +146,8 @@ public class CsvDataStore extends AbstractDataStore {
                 final File dir = new File(path);
                 if (dir.isDirectory()) {
                     stream(dir.listFiles()).of(stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName(), paramMap))
-                            .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified())).forEach(f -> fileList.add(f)));
+                            .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified()))
+                            .forEach(f -> fileList.add(f)));
                 } else {
                     logger.warn("{} is not a directory.", path);
                 }
