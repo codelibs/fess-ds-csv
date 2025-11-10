@@ -601,7 +601,7 @@ public class CsvDataStoreTest extends ContainerTestCase {
         paramMap.put("quote_disabled", "false");
         paramMap.put("escape_disabled", "false");
         paramMap.put("null_string", "N/A");
-        paramMap.put("break_string", " ");
+        paramMap.put("break_string", "<br>");
         paramMap.put("ignore_line_patterns", "^#.*|^//.*");
 
         com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
@@ -616,7 +616,7 @@ public class CsvDataStoreTest extends ContainerTestCase {
         assertFalse(config.isQuoteDisabled());
         assertFalse(config.isEscapeDisabled());
         assertEquals("N/A", config.getNullString());
-        assertEquals(" ", config.getBreakString());
+        assertEquals("<br>", config.getBreakString());
         assertNotNull(config.getIgnoreLinePatterns());
     }
 
