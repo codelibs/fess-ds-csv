@@ -15,10 +15,11 @@
  */
 package org.codelibs.fess.ds.csv;
 
-import org.codelibs.fess.util.ComponentUtil;
-import org.dbflute.utflute.lastadi.ContainerTestCase;
+import org.junit.jupiter.api.TestInfo;
 
-public class CsvListDataStoreTest extends ContainerTestCase {
+import org.codelibs.fess.util.ComponentUtil;
+
+public class CsvListDataStoreTest extends UnitDsTestCase {
     public CsvListDataStore dataStore;
 
     @Override
@@ -32,15 +33,15 @@ public class CsvListDataStoreTest extends ContainerTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
-        super.setUp();
+    public void setUp(TestInfo testInfo) throws Exception {
+        super.setUp(testInfo);
         dataStore = new CsvListDataStore();
     }
 
     @Override
-    public void tearDown() throws Exception {
+    public void tearDown(TestInfo testInfo) throws Exception {
         ComponentUtil.setFessConfig(null);
-        super.tearDown();
+        super.tearDown(testInfo);
     }
 
     public void test_getName() {
