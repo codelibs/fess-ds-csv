@@ -15,6 +15,7 @@
  */
 package org.codelibs.fess.ds.csv;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import org.codelibs.fess.util.ComponentUtil;
@@ -44,10 +45,12 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         super.tearDown(testInfo);
     }
 
+    @Test
     public void test_getName() {
         assertEquals("CsvListDataStore", dataStore.getName());
     }
 
+    @Test
     public void test_getTimestampMargin_default() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
@@ -56,6 +59,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, result);
     }
 
+    @Test
     public void test_getTimestampMargin_custom() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "5000");
@@ -65,6 +69,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(5000L, result);
     }
 
+    @Test
     public void test_getTimestampMargin_invalid() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "invalid");
@@ -74,6 +79,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, result);
     }
 
+    @Test
     public void test_isCsvFile_recent_file() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "recent_test.csv");
@@ -94,6 +100,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_old_file() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "old_test.csv");
@@ -116,6 +123,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_non_csv_file() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File txtFile = new java.io.File(tempDir, "test.txt");
@@ -136,22 +144,27 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_deleteProcessedFile_default() {
         assertTrue(dataStore.deleteProcessedFile);
     }
 
+    @Test
     public void test_csvFileTimestampMargin_default() {
         assertEquals(10000L, dataStore.csvFileTimestampMargin);
     }
 
+    @Test
     public void test_ignoreDataStoreException_default() {
         assertTrue(dataStore.ignoreDataStoreException);
     }
 
+    @Test
     public void test_inheritance_from_CsvDataStore() {
         assertTrue(dataStore instanceof CsvDataStore);
     }
 
+    @Test
     public void test_getTimestampMargin_empty_string() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "");
@@ -161,6 +174,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, result);
     }
 
+    @Test
     public void test_getTimestampMargin_null_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", null);
@@ -170,6 +184,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, result);
     }
 
+    @Test
     public void test_isCsvFile_with_default_timestamp_margin() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "default_margin_test.csv");
@@ -190,6 +205,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_edge_case_timing() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "edge_timing_test.csv");
@@ -215,6 +231,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_csvFileSuffixs_inherited() {
         assertNotNull(dataStore.csvFileSuffixs);
         assertEquals(2, dataStore.csvFileSuffixs.length);
@@ -222,12 +239,14 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(".tsv", dataStore.csvFileSuffixs[1]);
     }
 
+    @Test
     public void test_constants_values() {
         assertEquals(10000L, dataStore.csvFileTimestampMargin);
         assertTrue(dataStore.deleteProcessedFile);
         assertTrue(dataStore.ignoreDataStoreException);
     }
 
+    @Test
     public void test_isCsvFile_case_insensitive() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "CASE_TEST.CSV");
@@ -248,6 +267,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getTimestampMargin_zero_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "0");
@@ -257,6 +277,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(0L, result);
     }
 
+    @Test
     public void test_getTimestampMargin_large_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "60000");
@@ -266,6 +287,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(60000L, result);
     }
 
+    @Test
     public void test_getTimestampMargin_negative_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "-1000");
@@ -275,6 +297,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(-1000L, result);
     }
 
+    @Test
     public void test_isCsvFile_tsv_with_timestamp() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File tsvFile = new java.io.File(tempDir, "test.tsv");
@@ -296,6 +319,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_boundary_timestamp() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "boundary_test.csv");
@@ -318,6 +342,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_with_timestamp_filter() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "timestamp_filter_test");
         tempDir.mkdir();
@@ -349,6 +374,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_all_files_too_recent() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "all_recent_test");
         tempDir.mkdir();
@@ -376,6 +402,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_mixed_old_and_new_files() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "mixed_age_test");
         tempDir.mkdir();
@@ -414,6 +441,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getTimestampMargin_whitespace_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("timestamp_margin", "  ");
@@ -423,6 +451,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, result);
     }
 
+    @Test
     public void test_isCsvFile_inherits_parent_behavior() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
@@ -442,6 +471,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_with_zero_timestamp_margin() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "zero_margin_test");
         tempDir.mkdir();
@@ -469,18 +499,21 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_default_field_values_are_correct() {
         assertEquals(10000L, dataStore.csvFileTimestampMargin);
         assertTrue(dataStore.deleteProcessedFile);
         assertTrue(dataStore.ignoreDataStoreException);
     }
 
+    @Test
     public void test_getName_is_correct() {
         assertEquals("CsvListDataStore", dataStore.getName());
         assertNotNull(dataStore.getName());
         assertFalse(dataStore.getName().isEmpty());
     }
 
+    @Test
     public void test_inheritance_methods() {
         assertTrue(dataStore instanceof CsvDataStore);
 
@@ -488,6 +521,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(2, dataStore.csvFileSuffixs.length);
     }
 
+    @Test
     public void test_getCsvFileList_with_files_parameter() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile = new java.io.File(tempDir, "list_test.csv");
@@ -510,6 +544,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_various_file_ages() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
@@ -547,6 +582,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_field_mutation() {
         dataStore.deleteProcessedFile = false;
         assertFalse(dataStore.deleteProcessedFile);
@@ -567,6 +603,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         assertEquals(10000L, dataStore.csvFileTimestampMargin);
     }
 
+    @Test
     public void test_getCsvFileList_sorting_with_timestamp_filter() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "sort_filter_test");
         tempDir.mkdir();
