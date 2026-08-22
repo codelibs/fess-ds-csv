@@ -756,4 +756,14 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
             csvFile.delete();
         }
     }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_list_specific_parameters() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("timestamp_margin", "10000");
+        paramMap.put("delete_processed_file", "false");
+        paramMap.put("ignore_data_store_exception", "false");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
 }

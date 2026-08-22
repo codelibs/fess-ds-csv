@@ -22,12 +22,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
@@ -111,6 +114,15 @@ public class CsvDataStore extends AbstractDataStore {
 
     /** Prefix for cell field names. */
     protected static final String CELL_PREFIX = "cell";
+
+    /** Parameter name prefixes that are passed through to other Fess components. */
+    protected static final String[] PASSTHROUGH_PARAM_PREFIXES =
+            { "crawler.", "field.", "event.", "client.", "config.", "info.", "jcifs." };
+
+    /** Parameter names interpreted by the data store framework rather than this plugin. */
+    protected static final String[] FRAMEWORK_PARAM_NAMES =
+            { "read_interval", "script_type", "num_of_threads", "delete_old_docs", "keep_expires_docs", "time_to_live", "crawler.stats.key",
+                    "url_filter", "url_exclude_pattern", "session_id", "crawling_info_id", "ignore.field.names" };
 
     /** Supported CSV file suffixes. */
     public String[] csvFileSuffixs = { ".csv", ".tsv" };
@@ -224,6 +236,11 @@ public class CsvDataStore extends AbstractDataStore {
     @Override
     protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap) {
+
+        final List<String> unknownParamNames = findUnknownParamNames(paramMap);
+        if (!unknownParamNames.isEmpty()) {
+            logger.warn("Unknown parameter(s): {}. Check for typos; unknown parameters are ignored.", unknownParamNames);
+        }
 
         final long readInterval = getReadInterval(paramMap);
 
@@ -404,6 +421,88 @@ public class CsvDataStore extends AbstractDataStore {
         } finally {
             CloseableUtil.closeQuietly(csvReader);
         }
+    }
+
+    /**
+     * Returns the parameter names this data store understands, in snake_case.
+     * Subclasses add their own names to the returned set.
+     *
+     * @return the set of known parameter names
+     */
+    protected Set<String> getKnownParamNames() {
+        final Set<String> names = new HashSet<>();
+        names.add(CSV_FILES_PARAM);
+        names.add(CSV_DIRS_PARAM);
+        names.add(CSV_FILE_ENCODING_PARAM);
+        names.add(HAS_HEADER_LINE_PARAM);
+        names.add(SEPARATOR_CHARACTER_PARAM);
+        names.add(QUOTE_CHARACTER_PARAM);
+        names.add(ESCAPE_CHARACTER_PARAM);
+        names.add(QUOTE_DISABLED_PARAM);
+        names.add(ESCAPE_DISABLED_PARAM);
+        names.add(SKIP_LINES_PARAM);
+        names.add(IGNORE_LINE_PATTERNS_PARAM);
+        names.add(IGNORE_EMPTY_LINES_PARAM);
+        names.add(IGNORE_TRAILING_WHITESPACES_PARAM);
+        names.add(IGNORE_LEADING_WHITESPACES_PARAM);
+        names.add(NULL_STRING_PARAM);
+        names.add(BREAK_STRING_PARAM);
+        for (final String name : FRAMEWORK_PARAM_NAMES) {
+            names.add(name);
+        }
+        return names;
+    }
+
+    /**
+     * Converts a camelCase parameter name to snake_case so both spellings compare equal.
+     * ParamMap accepts either form, so normalization is required before matching.
+     *
+     * @param name the parameter name
+     * @return the snake_case form
+     */
+    protected String toSnakeCase(final String name) {
+        final StringBuilder buf = new StringBuilder(name.length() + 8);
+        for (int i = 0; i < name.length(); i++) {
+            final char c = name.charAt(i);
+            if (Character.isUpperCase(c)) {
+                if (i > 0) {
+                    buf.append('_');
+                }
+                buf.append(Character.toLowerCase(c));
+            } else {
+                buf.append(c);
+            }
+        }
+        return buf.toString();
+    }
+
+    /**
+     * Finds parameter names that this data store does not understand.
+     * A typo in a parameter name is otherwise ignored without any message.
+     *
+     * @param paramMap the data store parameters
+     * @return the unrecognized parameter names, sorted so the warning is reproducible
+     */
+    protected List<String> findUnknownParamNames(final DataStoreParams paramMap) {
+        final Set<String> known = getKnownParamNames();
+        final List<String> unknown = new ArrayList<>();
+        for (final Map.Entry<String, Object> entry : paramMap.asMap().entrySet()) {
+            final String name = entry.getKey();
+            boolean passthrough = false;
+            for (final String prefix : PASSTHROUGH_PARAM_PREFIXES) {
+                if (name.startsWith(prefix)) {
+                    passthrough = true;
+                    break;
+                }
+            }
+            if (!passthrough && !known.contains(name) && !known.contains(toSnakeCase(name))) {
+                unknown.add(name);
+            }
+        }
+        // DataStoreParams is backed by a plain HashMap, so iteration order is not insertion order.
+        // Sort so the same misconfiguration always produces the same warning text.
+        Collections.sort(unknown);
+        return unknown;
     }
 
     /**

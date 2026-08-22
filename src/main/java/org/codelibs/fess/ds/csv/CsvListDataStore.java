@@ -17,6 +17,7 @@ package org.codelibs.fess.ds.csv;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -96,6 +97,15 @@ public class CsvListDataStore extends CsvDataStore {
             }
         }
         return csvFileTimestampMargin;
+    }
+
+    @Override
+    protected Set<String> getKnownParamNames() {
+        final Set<String> names = super.getKnownParamNames();
+        names.add(TIMESTAMP_MARGIN);
+        names.add(DELETE_PROCESSED_FILE_PARAM);
+        names.add(IGNORE_DATA_STORE_EXCEPTION_PARAM);
+        return names;
     }
 
     /**

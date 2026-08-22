@@ -1000,4 +1000,111 @@ public class CsvDataStoreTest extends UnitDsTestCase {
             csvFile.delete();
         }
     }
+
+    @Test
+    public void test_findUnknownParamNames_reports_a_typo() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("files", "/tmp/a.csv");
+        paramMap.put("has_headerline", "true"); // typo of has_header_line
+
+        assertEquals(java.util.List.of("has_headerline"), dataStore.findUnknownParamNames(paramMap));
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_all_plugin_parameters() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("files", "/tmp/a.csv");
+        paramMap.put("directories", "/tmp");
+        paramMap.put("file_encoding", "UTF-8");
+        paramMap.put("has_header_line", "true");
+        paramMap.put("separator_character", ",");
+        paramMap.put("quote_character", "\"");
+        paramMap.put("escape_character", "\\");
+        paramMap.put("quote_disabled", "false");
+        paramMap.put("escape_disabled", "false");
+        paramMap.put("skip_lines", "0");
+        paramMap.put("ignore_line_patterns", "^#.*");
+        paramMap.put("ignore_empty_lines", "true");
+        paramMap.put("ignore_trailing_whitespaces", "true");
+        paramMap.put("ignore_leading_whitespaces", "true");
+        paramMap.put("null_string", "NULL");
+        paramMap.put("break_string", "\\n");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_framework_parameters() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("readInterval", "100");
+        paramMap.put("script_type", "groovy");
+        paramMap.put("numOfThreads", "4");
+        paramMap.put("delete_old_docs", "false");
+        paramMap.put("keep_expires_docs", "true");
+        paramMap.put("time_to_live", "60");
+        // Read directly by FileListIndexUpdateCallbackImpl, reachable from CsvListDataStore.
+        paramMap.put("ignore.field.names", "content,digest");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_framework_injected_session_params() {
+        // DataIndexHelper always injects these two; warning about them would fire on every crawl.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("sessionId", "20260822200000");
+        paramMap.put("crawlingInfoId", "abc123");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_passthrough_prefixes() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("crawler.file.auth", "example");
+        paramMap.put("crawler.web.proxyHost", "proxy.example.com");
+        paramMap.put("field.event_type", "event_type");
+        paramMap.put("event.create", "create");
+        paramMap.put("config.tika.tesseract.config", "/etc/tika");
+        paramMap.put("client.timeout", "5000");
+        paramMap.put("info.charSet", "UTF-8");
+        // Collected by prefix in DataConfig for NTLM authentication.
+        paramMap.put("jcifs.smb.client.username", "user");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_camel_case_spelling() {
+        // ParamMap folds snake_case and camelCase into each other, so both spellings are valid.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("fileEncoding", "UTF-8");
+        paramMap.put("hasHeaderLine", "true");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_accepts_ignore_field_names_and_jcifs_prefix_together() {
+        // Both are real, valid configuration: ignore.field.names is read directly by
+        // FileListIndexUpdateCallbackImpl (reachable from CsvListDataStore), and jcifs.* is collected
+        // by prefix in DataConfig for NTLM authentication. Neither should trigger the unknown-param warning.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("ignore.field.names", "content,digest");
+        paramMap.put("jcifs.smb.client.username", "user");
+
+        assertTrue(dataStore.findUnknownParamNames(paramMap).isEmpty());
+    }
+
+    @Test
+    public void test_findUnknownParamNames_returns_sorted_names() {
+        // DataStoreParams is backed by a HashMap, so without an explicit sort the warning text
+        // would vary between runs for the same misconfiguration.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("zeta_typo", "1");
+        paramMap.put("alpha_typo", "2");
+        paramMap.put("mmm_typo", "3");
+
+        assertEquals(java.util.List.of("alpha_typo", "mmm_typo", "zeta_typo"), dataStore.findUnknownParamNames(paramMap));
+    }
 }
