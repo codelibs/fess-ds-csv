@@ -927,4 +927,77 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(1, rows.size());
         assertEquals(java.util.List.of("1", "\"unbalanced,x\n2,alice,y\n3,bob,z\n"), rows.get(0));
     }
+
+    /** Registers the components processCsv needs so it can run inside this unit-test container. */
+    private void registerCrawlerComponents() {
+        org.codelibs.fess.util.ComponentUtil.register(new org.codelibs.fess.helper.SystemHelper(), "systemHelper");
+        final org.codelibs.fess.helper.CrawlerStatsHelper crawlerStatsHelper = new org.codelibs.fess.helper.CrawlerStatsHelper();
+        crawlerStatsHelper.init();
+        org.codelibs.fess.util.ComponentUtil.register(crawlerStatsHelper, "crawlerStatsHelper");
+        // The test container only includes convention.xml/lastaflute.xml (not Fess's fess_se.xml), so the
+        // "groovy" engine convertValue() relies on is otherwise absent; register it the same way production
+        // DI does (fess_se.xml + fess_se++.xml) so the documented row-filtering scripts actually evaluate.
+        final org.codelibs.fess.script.ScriptEngineFactory scriptEngineFactory = new org.codelibs.fess.script.ScriptEngineFactory();
+        org.codelibs.fess.util.ComponentUtil.register(scriptEngineFactory, "scriptEngineFactory");
+        final org.codelibs.fess.script.groovy.GroovyEngine groovyEngine = new org.codelibs.fess.script.groovy.GroovyEngine();
+        groovyEngine.init();
+        groovyEngine.register();
+    }
+
+    /** Writes the given text to a temporary .csv file that the caller must delete. */
+    private java.io.File writeTempCsv(final String content) throws java.io.IOException {
+        final java.io.File file = java.io.File.createTempFile("fess-ds-csv-test-", ".csv");
+        java.nio.file.Files.writeString(file.toPath(), content, java.nio.charset.StandardCharsets.UTF_8);
+        return file;
+    }
+
+    @Test
+    public void test_processCsv_indexes_each_row_with_header_names_and_cells() throws Exception {
+        registerCrawlerComponents();
+        final java.io.File csvFile = writeTempCsv("id,name\n1,alice\n2,bob\n");
+        try {
+            final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
+            scriptMap.put("url", "\"http://example.com/\" + id");
+            scriptMap.put("title", "name");
+            scriptMap.put("content", "cell2");
+
+            dataStore.processCsv(null, callback, paramMap, scriptMap, new java.util.HashMap<>(), dataStore.buildCsvConfig(paramMap),
+                    csvFile, 0L, "UTF-8", true);
+
+            assertEquals(2, callback.dataMapList.size());
+            assertEquals("http://example.com/1", callback.dataMapList.get(0).get("url"));
+            assertEquals("alice", callback.dataMapList.get(0).get("title"));
+            assertEquals("alice", callback.dataMapList.get(0).get("content"));
+            assertEquals("http://example.com/2", callback.dataMapList.get(1).get("url"));
+            assertEquals("bob", callback.dataMapList.get(1).get("title"));
+        } finally {
+            csvFile.delete();
+        }
+    }
+
+    @Test
+    public void test_processCsv_skips_rows_whose_script_produced_no_url() throws Exception {
+        registerCrawlerComponents();
+        final java.io.File csvFile = writeTempCsv("id,in_stock\n1,true\n2,false\n3,true\n");
+        try {
+            final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
+            // The filtering idiom the documentation recommends.
+            scriptMap.put("url", "in_stock == \"true\" ? \"http://example.com/\" + id : null");
+            scriptMap.put("title", "id");
+
+            dataStore.processCsv(null, callback, paramMap, scriptMap, new java.util.HashMap<>(), dataStore.buildCsvConfig(paramMap),
+                    csvFile, 0L, "UTF-8", true);
+
+            // Rows 1 and 3 are indexed; row 2 is skipped quietly rather than recorded as a failure.
+            assertEquals(2, callback.dataMapList.size());
+            assertEquals("http://example.com/1", callback.dataMapList.get(0).get("url"));
+            assertEquals("http://example.com/3", callback.dataMapList.get(1).get("url"));
+        } finally {
+            csvFile.delete();
+        }
+    }
 }

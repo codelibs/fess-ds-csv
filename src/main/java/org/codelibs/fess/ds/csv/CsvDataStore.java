@@ -263,6 +263,8 @@ public class CsvDataStore extends AbstractDataStore {
         logger.info("Loading {}", csvFile.getAbsolutePath());
         final CrawlerStatsHelper crawlerStatsHelper = ComponentUtil.getCrawlerStatsHelper();
         final String scriptType = getScriptType(paramMap);
+        final String urlFieldName = ComponentUtil.getFessConfig().getIndexFieldUrl();
+        int noUrlCount = 0;
         CsvReader csvReader = null;
         try {
             csvReader = new CsvReader(new BufferedReader(new InputStreamReader(new FileInputStream(csvFile), csvFileEncoding)), csvConfig);
@@ -334,8 +336,16 @@ public class CsvDataStore extends AbstractDataStore {
                         }
                     }
 
-                    if (dataMap.get("url") instanceof final String url) {
+                    if (dataMap.get(urlFieldName) instanceof final String url) {
                         statsKey.setUrl(url);
+                    }
+
+                    if (dataMap.get(urlFieldName) == null) {
+                        // The script chose not to produce a url for this row (the documented way to
+                        // filter rows). Skip it quietly instead of recording a failure URL per row.
+                        noUrlCount++;
+                        crawlerStatsHelper.discard(statsKey);
+                        continue;
                     }
 
                     callback.store(paramMap, dataMap);
@@ -384,6 +394,10 @@ public class CsvDataStore extends AbstractDataStore {
                 if (readInterval > 0) {
                     sleep(readInterval);
                 }
+            }
+            if (noUrlCount > 0) {
+                logger.warn("Skipped {} row(s) in {} because the script did not set the {} field.", noUrlCount, csvFile.getAbsolutePath(),
+                        urlFieldName);
             }
         } catch (final Exception e) {
             throw new DataStoreException("Failed to crawl data when reading csv file.", e);
