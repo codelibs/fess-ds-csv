@@ -741,4 +741,50 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         paramMap.put("has_header_line", "False");
         assertFalse(dataStore.hasHeaderLine(paramMap));
     }
+
+    @Test
+    public void test_getCsvFileList_sorting_beyond_int_overflow_threshold() {
+        // A long millisecond difference above Integer.MAX_VALUE (~24.8 days) wraps when cast to int,
+        // which silently reverses the comparison. Spread the files far enough apart to hit that.
+        // 30-day steps are chosen deliberately: (int) 2_592_000_000L is -1_702_967_296, so the
+        // old comparator inverted every adjacent comparison and could not return sorted output.
+        // (Which wrong order it produced depended on File.listFiles() order, because a
+        // sign-flipping comparator also breaks transitivity.) Not every spread exposes the bug -
+        // 100- and 300-day gaps happen to wrap back to the correct sign and would make this
+        // test vacuous.
+        final java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_overflow_sort_test_" + System.nanoTime());
+        tempDir.mkdirs();
+
+        final long day = 24L * 60L * 60L * 1000L;
+        final long base = System.currentTimeMillis() - 100L * day;
+        final java.io.File oldest = new java.io.File(tempDir, "oldest.csv");
+        final java.io.File middle = new java.io.File(tempDir, "middle.csv");
+        final java.io.File newest = new java.io.File(tempDir, "newest.csv");
+
+        try {
+            oldest.createNewFile();
+            middle.createNewFile();
+            newest.createNewFile();
+            oldest.setLastModified(base);
+            middle.setLastModified(base + 30L * day);
+            newest.setLastModified(base + 60L * day);
+
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            paramMap.put("directories", tempDir.getAbsolutePath());
+
+            final java.util.List<java.io.File> result = dataStore.getCsvFileList(paramMap);
+
+            assertEquals(3, result.size());
+            assertEquals("oldest.csv", result.get(0).getName());
+            assertEquals("middle.csv", result.get(1).getName());
+            assertEquals("newest.csv", result.get(2).getName());
+        } catch (final java.io.IOException e) {
+            fail("Failed to prepare test files: " + e.getMessage());
+        } finally {
+            oldest.delete();
+            middle.delete();
+            newest.delete();
+            tempDir.delete();
+        }
+    }
 }

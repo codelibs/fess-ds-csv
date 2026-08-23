@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -146,7 +147,7 @@ public class CsvDataStore extends AbstractDataStore {
                 final File dir = new File(path);
                 if (dir.isDirectory()) {
                     stream(dir.listFiles()).of(stream -> stream.filter(f -> isCsvFile(f.getParentFile(), f.getName(), paramMap))
-                            .sorted((f1, f2) -> (int) (f1.lastModified() - f2.lastModified()))
+                            .sorted(Comparator.comparingLong(File::lastModified))
                             .forEach(f -> fileList.add(f)));
                 } else {
                     logger.warn("{} is not a directory.", path);
