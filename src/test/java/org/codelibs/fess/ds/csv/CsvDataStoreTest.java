@@ -15,6 +15,7 @@
  */
 package org.codelibs.fess.ds.csv;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import org.codelibs.fess.util.ComponentUtil;
@@ -44,10 +45,12 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         super.tearDown(testInfo);
     }
 
+    @Test
     public void test_getName() {
         assertEquals("CsvDataStore", dataStore.getName());
     }
 
+    @Test
     public void test_getCsvFileList_with_files_param() {
         // Create temporary CSV files
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
@@ -74,6 +77,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_with_directories_param() {
         // Create temporary directory with CSV files
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_test_dir");
@@ -107,6 +111,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_empty_params() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
@@ -118,6 +123,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile() {
         java.io.File parentDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
@@ -129,12 +135,14 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertFalse(dataStore.isCsvFile(parentDir, "test.xlsx", paramMap));
     }
 
+    @Test
     public void test_getCsvFileEncoding_default() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
         assertEquals("UTF-8", dataStore.getCsvFileEncoding(paramMap));
     }
 
+    @Test
     public void test_getCsvFileEncoding_custom() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("file_encoding", "Shift_JIS");
@@ -142,12 +150,14 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals("Shift_JIS", dataStore.getCsvFileEncoding(paramMap));
     }
 
+    @Test
     public void test_hasHeaderLine_default() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
         assertFalse(dataStore.hasHeaderLine(paramMap));
     }
 
+    @Test
     public void test_hasHeaderLine_true() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("has_header_line", "true");
@@ -155,6 +165,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(dataStore.hasHeaderLine(paramMap));
     }
 
+    @Test
     public void test_hasHeaderLine_false() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("has_header_line", "false");
@@ -162,6 +173,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertFalse(dataStore.hasHeaderLine(paramMap));
     }
 
+    @Test
     public void test_buildCsvConfig_default() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
@@ -170,6 +182,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_custom_separator() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", "\\t");
@@ -179,6 +192,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals('\t', config.getSeparator());
     }
 
+    @Test
     public void test_buildCsvConfig_custom_quote() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("quote_character", "'");
@@ -188,6 +202,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals('\'', config.getQuote());
     }
 
+    @Test
     public void test_buildCsvConfig_custom_escape() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("escape_character", "\\");
@@ -197,6 +212,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals('\\', config.getEscape());
     }
 
+    @Test
     public void test_buildCsvConfig_skip_lines() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("skip_lines", "2");
@@ -206,6 +222,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(2, config.getSkipLines());
     }
 
+    @Test
     public void test_buildCsvConfig_ignore_empty_lines() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_empty_lines", "true");
@@ -215,6 +232,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isIgnoreEmptyLines());
     }
 
+    @Test
     public void test_buildCsvConfig_ignore_leading_whitespaces() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_leading_whitespaces", "true");
@@ -224,6 +242,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isIgnoreLeadingWhitespaces());
     }
 
+    @Test
     public void test_buildCsvConfig_ignore_trailing_whitespaces() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_trailing_whitespaces", "true");
@@ -233,6 +252,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isIgnoreTrailingWhitespaces());
     }
 
+    @Test
     public void test_getCsvFileList_with_test_resources() {
         java.io.File testResourcesDir = new java.io.File("src/test/resources");
         if (!testResourcesDir.exists()) {
@@ -248,6 +268,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(result.stream().anyMatch(f -> f.getName().endsWith(".csv") || f.getName().endsWith(".tsv")));
     }
 
+    @Test
     public void test_buildCsvConfig_null_string() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("null_string", "NULL");
@@ -257,6 +278,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals("NULL", config.getNullString());
     }
 
+    @Test
     public void test_buildCsvConfig_break_string() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("break_string", "\\n");
@@ -266,6 +288,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals("\\n", config.getBreakString());
     }
 
+    @Test
     public void test_buildCsvConfig_quote_disabled() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("quote_disabled", "true");
@@ -275,6 +298,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isQuoteDisabled());
     }
 
+    @Test
     public void test_buildCsvConfig_escape_disabled() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("escape_disabled", "true");
@@ -284,6 +308,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isEscapeDisabled());
     }
 
+    @Test
     public void test_buildCsvConfig_ignore_line_patterns() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_line_patterns", "^#.*");
@@ -293,6 +318,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config.getIgnoreLinePatterns());
     }
 
+    @Test
     public void test_getCsvFileList_nonexistent_directory() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("directories", "/nonexistent/directory");
@@ -302,6 +328,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(0, result.size());
     }
 
+    @Test
     public void test_getCsvFileList_nonexistent_file() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("files", "/nonexistent/file.csv");
@@ -311,6 +338,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(0, result.size());
     }
 
+    @Test
     public void test_buildCsvConfig_multiple_parameters() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", "\\t");
@@ -328,6 +356,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(config.isIgnoreLeadingWhitespaces());
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_skip_lines() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("skip_lines", "not_a_number");
@@ -338,6 +367,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(0, config.getSkipLines());
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_separator() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", "");
@@ -347,6 +377,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_quote() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("quote_character", "");
@@ -356,6 +387,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_escape() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("escape_character", "");
@@ -365,6 +397,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_quote_disabled() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("quote_disabled", "not_boolean");
@@ -374,6 +407,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_escape_disabled() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("escape_disabled", "not_boolean");
@@ -383,6 +417,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_ignore_leading_whitespaces() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_leading_whitespaces", "not_boolean");
@@ -392,6 +427,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_ignore_trailing_whitespaces() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_trailing_whitespaces", "not_boolean");
@@ -401,6 +437,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_buildCsvConfig_invalid_ignore_empty_lines() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("ignore_empty_lines", "not_boolean");
@@ -410,6 +447,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_hasHeaderLine_invalid_value() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("has_header_line", "invalid_boolean");
@@ -417,6 +455,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertFalse(dataStore.hasHeaderLine(paramMap));
     }
 
+    @Test
     public void test_getCsvFileList_with_real_test_resources() {
         java.io.File testResourcesDir = new java.io.File("src/test/resources");
         if (!testResourcesDir.exists()) {
@@ -443,6 +482,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertTrue(foundTsv);
     }
 
+    @Test
     public void test_getCsvFileList_multiple_directories() {
         java.io.File tempDir1 = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_test_dir1");
         java.io.File tempDir2 = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_test_dir2");
@@ -472,6 +512,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_mixed_csv_and_tsv() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_mixed_test");
         tempDir.mkdir();
@@ -501,6 +542,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_getCsvFileList_files_sorting_by_modified_time() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "csv_sort_test");
         tempDir.mkdir();
@@ -541,6 +583,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_isCsvFile_various_extensions() {
         java.io.File parentDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
@@ -558,6 +601,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertFalse(dataStore.isCsvFile(parentDir, "file", paramMap));
     }
 
+    @Test
     public void test_getCsvFileEncoding_various_encodings() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
@@ -577,6 +621,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals("ISO-8859-1", dataStore.getCsvFileEncoding(paramMap));
     }
 
+    @Test
     public void test_buildCsvConfig_with_special_characters() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", "|");
@@ -590,6 +635,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals('/', config.getEscape());
     }
 
+    @Test
     public void test_buildCsvConfig_comprehensive() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", ";");
@@ -621,6 +667,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config.getIgnoreLinePatterns());
     }
 
+    @Test
     public void test_csvFileSuffixs_default() {
         assertNotNull(dataStore.csvFileSuffixs);
         assertEquals(2, dataStore.csvFileSuffixs.length);
@@ -628,11 +675,13 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals(".tsv", dataStore.csvFileSuffixs[1]);
     }
 
+    @Test
     public void test_getName_not_null() {
         assertNotNull(dataStore.getName());
         assertFalse(dataStore.getName().isEmpty());
     }
 
+    @Test
     public void test_getCsvFileList_with_multiple_files() {
         java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"));
         java.io.File csvFile1 = new java.io.File(tempDir, "multi_test1.csv");
@@ -662,6 +711,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         }
     }
 
+    @Test
     public void test_buildCsvConfig_empty_values() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
         paramMap.put("separator_character", "");
@@ -675,6 +725,7 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config);
     }
 
+    @Test
     public void test_hasHeaderLine_case_variations() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
 
