@@ -400,6 +400,10 @@ public class CsvDataStore extends AbstractDataStore {
      */
     protected CsvConfig buildCsvConfig(final DataStoreParams paramMap) {
         final CsvConfig csvConfig = new CsvConfig();
+        // The library disables quoting by default, which mis-parses RFC 4180 input: a quoted
+        // separator splits the field and a quoted line break splits the record. Enable quoting
+        // here; the escape settings are derived at the end, once quote_disabled is known.
+        csvConfig.setQuoteDisabled(false);
 
         if (paramMap.containsKey(SEPARATOR_CHARACTER_PARAM)) {
             final String value = paramMap.getAsString(SEPARATOR_CHARACTER_PARAM);
@@ -528,6 +532,17 @@ public class CsvDataStore extends AbstractDataStore {
                     logger.warn("Failed to load {}", SKIP_LINES_PARAM, e);
                 }
             }
+        }
+
+        // RFC 4180 escapes a quote by doubling it, so the escape character mirrors the quote
+        // character, and escaping only makes sense while quoting is on. Both are derived here,
+        // after the parameters have been applied, so that quote_disabled=true restores the
+        // previous behaviour exactly instead of producing a third, broken parse.
+        if (StringUtil.isBlank(paramMap.getAsString(ESCAPE_CHARACTER_PARAM))) {
+            csvConfig.setEscape(csvConfig.getQuote());
+        }
+        if (StringUtil.isBlank(paramMap.getAsString(ESCAPE_DISABLED_PARAM))) {
+            csvConfig.setEscapeDisabled(csvConfig.isQuoteDisabled());
         }
 
         return csvConfig;

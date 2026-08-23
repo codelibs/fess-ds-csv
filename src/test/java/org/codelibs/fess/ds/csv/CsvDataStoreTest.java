@@ -787,4 +787,144 @@ public class CsvDataStoreTest extends UnitDsTestCase {
             tempDir.delete();
         }
     }
+
+    /** Parses the given CSV text with the config produced by buildCsvConfig and returns the rows. */
+    private java.util.List<java.util.List<String>> parseWith(final org.codelibs.fess.entity.DataStoreParams paramMap, final String csv)
+            throws Exception {
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+        final java.util.List<java.util.List<String>> rows = new java.util.ArrayList<>();
+        try (com.orangesignal.csv.CsvReader reader = new com.orangesignal.csv.CsvReader(new java.io.StringReader(csv), config)) {
+            java.util.List<String> row;
+            while ((row = reader.readValues()) != null) {
+                if (row.size() == 1 && row.get(0).isEmpty()) {
+                    continue; // trailing empty record at EOF
+                }
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
+    @Test
+    public void test_buildCsvConfig_defaults_to_rfc4180_quoting() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "1,\"a,b\",x\n");
+
+        assertEquals(1, rows.size());
+        assertEquals(3, rows.get(0).size());
+        assertEquals("1", rows.get(0).get(0));
+        assertEquals("a,b", rows.get(0).get(1));
+        assertEquals("x", rows.get(0).get(2));
+    }
+
+    @Test
+    public void test_buildCsvConfig_defaults_keep_quoted_line_breaks_in_one_record() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "1,\"l1\nl2\",x\n");
+
+        assertEquals(1, rows.size());
+        assertEquals(3, rows.get(0).size());
+        assertEquals("l1\nl2", rows.get(0).get(1));
+    }
+
+    @Test
+    public void test_buildCsvConfig_defaults_unescape_doubled_quotes() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "1,\"say \"\"hi\"\"\",x\n");
+
+        assertEquals(1, rows.size());
+        assertEquals("say \"hi\"", rows.get(0).get(1));
+    }
+
+    @Test
+    public void test_buildCsvConfig_defaults_strip_surrounding_quotes() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "\"1\",\"abc\",\"x\"\n");
+
+        assertEquals(java.util.List.of("1", "abc", "x"), rows.get(0));
+    }
+
+    @Test
+    public void test_buildCsvConfig_defaults_leave_unquoted_values_untouched() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        // Values that are not quoted must parse exactly as before this change.
+        assertEquals(java.util.List.of("1", "say \"hi\" now", "x"), parseWith(paramMap, "1,say \"hi\" now,x\n").get(0));
+        assertEquals(java.util.List.of("1", "abc\"", "x"), parseWith(paramMap, "1,abc\",x\n").get(0));
+        assertEquals(java.util.List.of("1", "C:\\path\\to", "x"), parseWith(paramMap, "1,C:\\path\\to,x\n").get(0));
+        assertEquals(java.util.List.of("1", "", "x"), parseWith(paramMap, "1,,x\n").get(0));
+        assertEquals(java.util.List.of("1", "山田太郎", "営業部"), parseWith(paramMap, "1,山田太郎,営業部\n").get(0));
+    }
+
+    @Test
+    public void test_buildCsvConfig_explicit_quote_disabled_still_wins() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("quote_disabled", "true");
+
+        // With quoting explicitly disabled the quoted comma splits the field, as before.
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "1,\"a,b\",x\n");
+
+        assertEquals(java.util.List.of("1", "\"a", "b\"", "x"), rows.get(0));
+    }
+
+    @Test
+    public void test_buildCsvConfig_quote_disabled_restores_previous_parsing_exactly() throws Exception {
+        // quote_disabled=true is the documented way back to the old behaviour. Escaping must be
+        // disabled along with it, or the quote character swallows the following separator and
+        // produces a third parse that matches neither the old nor the RFC 4180 result.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("quote_disabled", "true");
+
+        assertEquals(java.util.List.of("1", "\"say \"\"hi\"\"\"", "x"), parseWith(paramMap, "1,\"say \"\"hi\"\"\",x\n").get(0));
+        assertEquals(java.util.List.of("1", "say \"hi\" now", "x"), parseWith(paramMap, "1,say \"hi\" now,x\n").get(0));
+    }
+
+    @Test
+    public void test_buildCsvConfig_explicit_escape_disabled_still_wins() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("escape_disabled", "true");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        assertTrue(config.isEscapeDisabled());
+        assertFalse(config.isQuoteDisabled());
+    }
+
+    @Test
+    public void test_buildCsvConfig_explicit_escape_character_still_wins() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("escape_character", "\\");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        assertEquals('\\', config.getEscape());
+    }
+
+    @Test
+    public void test_buildCsvConfig_escape_follows_custom_quote_character() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("quote_character", "'");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        assertEquals('\'', config.getQuote());
+        assertEquals('\'', config.getEscape());
+    }
+
+    @Test
+    public void test_buildCsvConfig_unclosed_quote_absorbs_the_rest_of_the_file() throws Exception {
+        // Enabling quoting reaches further than a single field: one unmatched quote makes the parser
+        // treat everything after it as a single value, so the remaining rows never become documents
+        // and nothing warns. Pinned here so the consequence stays visible.
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        final java.util.List<java.util.List<String>> rows = parseWith(paramMap, "1,\"unbalanced,x\n2,alice,y\n3,bob,z\n");
+
+        assertEquals(1, rows.size());
+        assertEquals(java.util.List.of("1", "\"unbalanced,x\n2,alice,y\n3,bob,z\n"), rows.get(0));
+    }
 }
