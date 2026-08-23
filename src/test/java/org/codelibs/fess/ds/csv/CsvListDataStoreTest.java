@@ -640,4 +640,120 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
             tempDir.delete();
         }
     }
+
+    @Test
+    public void test_isDeleteProcessedFile_defaults_to_field_value() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        assertTrue(dataStore.isDeleteProcessedFile(paramMap));
+    }
+
+    @Test
+    public void test_isDeleteProcessedFile_parameter_overrides_field() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("delete_processed_file", "false");
+
+        assertFalse(dataStore.isDeleteProcessedFile(paramMap));
+    }
+
+    @Test
+    public void test_isDeleteProcessedFile_blank_parameter_falls_back_to_field() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("delete_processed_file", "  ");
+
+        assertTrue(dataStore.isDeleteProcessedFile(paramMap));
+    }
+
+    @Test
+    public void test_isIgnoreDataStoreException_defaults_to_field_value() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+
+        assertTrue(dataStore.isIgnoreDataStoreException(paramMap));
+    }
+
+    @Test
+    public void test_isIgnoreDataStoreException_parameter_overrides_field() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("ignore_data_store_exception", "false");
+
+        assertFalse(dataStore.isIgnoreDataStoreException(paramMap));
+    }
+
+    @Test
+    public void test_isDeleteProcessedFile_respects_field_when_field_is_false() {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        dataStore.deleteProcessedFile = false;
+
+        assertFalse(dataStore.isDeleteProcessedFile(paramMap));
+    }
+
+    /** Registers the components processCsv needs so it can run inside this unit-test container. */
+    private void registerCrawlerComponents() {
+        org.codelibs.fess.util.ComponentUtil.register(new org.codelibs.fess.helper.SystemHelper(), "systemHelper");
+        final org.codelibs.fess.helper.CrawlerStatsHelper crawlerStatsHelper = new org.codelibs.fess.helper.CrawlerStatsHelper();
+        crawlerStatsHelper.init();
+        org.codelibs.fess.util.ComponentUtil.register(crawlerStatsHelper, "crawlerStatsHelper");
+        // The test container only includes convention.xml/lastaflute.xml (not Fess's fess_se.xml), so the
+        // "groovy" engine convertValue() relies on is otherwise absent; register it the same way production
+        // DI does (fess_se.xml + fess_se++.xml) so the documented row-filtering scripts actually evaluate.
+        final org.codelibs.fess.script.ScriptEngineFactory scriptEngineFactory = new org.codelibs.fess.script.ScriptEngineFactory();
+        org.codelibs.fess.util.ComponentUtil.register(scriptEngineFactory, "scriptEngineFactory");
+        final org.codelibs.fess.script.groovy.GroovyEngine groovyEngine = new org.codelibs.fess.script.groovy.GroovyEngine();
+        groovyEngine.init();
+        groovyEngine.register();
+    }
+
+    /** Writes the given text to a temporary .csv file that the caller must delete. */
+    private java.io.File writeTempCsv(final String content) throws java.io.IOException {
+        final java.io.File file = java.io.File.createTempFile("fess-ds-csv-list-test-", ".csv");
+        java.nio.file.Files.writeString(file.toPath(), content, java.nio.charset.StandardCharsets.UTF_8);
+        return file;
+    }
+
+    @Test
+    public void test_processCsv_deletes_the_processed_file_by_default() throws Exception {
+        // delete_processed_file defaults to true: this is the destructive behaviour users reported as
+        // "files disappearing", so it must actually run end-to-end rather than only exercising the getter.
+        registerCrawlerComponents();
+        final java.io.File csvFile = writeTempCsv("id,name\n1,alice\n2,bob\n");
+        try {
+            final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
+            scriptMap.put("url", "\"http://example.com/\" + id");
+            scriptMap.put("title", "name");
+
+            dataStore.processCsv(null, callback, paramMap, scriptMap, new java.util.HashMap<>(), dataStore.buildCsvConfig(paramMap),
+                    csvFile, 0L, "UTF-8", true);
+
+            assertEquals(2, callback.dataMapList.size());
+            assertFalse(csvFile.exists());
+        } finally {
+            csvFile.delete();
+        }
+    }
+
+    @Test
+    public void test_processCsv_keeps_the_file_when_delete_processed_file_is_false() throws Exception {
+        registerCrawlerComponents();
+        final String content = "id,name\n1,alice\n2,bob\n";
+        final java.io.File csvFile = writeTempCsv(content);
+        try {
+            final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            paramMap.put("delete_processed_file", "false");
+            final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
+            scriptMap.put("url", "\"http://example.com/\" + id");
+            scriptMap.put("title", "name");
+
+            dataStore.processCsv(null, callback, paramMap, scriptMap, new java.util.HashMap<>(), dataStore.buildCsvConfig(paramMap),
+                    csvFile, 0L, "UTF-8", true);
+
+            assertEquals(2, callback.dataMapList.size());
+            assertTrue(csvFile.exists());
+            assertEquals(content, java.nio.file.Files.readString(csvFile.toPath(), java.nio.charset.StandardCharsets.UTF_8));
+        } finally {
+            csvFile.delete();
+        }
+    }
 }

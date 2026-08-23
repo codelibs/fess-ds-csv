@@ -43,6 +43,12 @@ public class CsvListDataStore extends CsvDataStore {
     /** Parameter name for timestamp margin in milliseconds. */
     protected static final String TIMESTAMP_MARGIN = "timestamp_margin";
 
+    /** Parameter name for deleting processed CSV files. */
+    protected static final String DELETE_PROCESSED_FILE_PARAM = "delete_processed_file";
+
+    /** Parameter name for ignoring data store exceptions. */
+    protected static final String IGNORE_DATA_STORE_EXCEPTION_PARAM = "ignore_data_store_exception";
+
     /** Whether to delete processed CSV files. */
     public boolean deleteProcessedFile = true;
 
@@ -92,6 +98,42 @@ public class CsvListDataStore extends CsvDataStore {
         return csvFileTimestampMargin;
     }
 
+    /**
+     * Determines whether processed CSV files are deleted.
+     *
+     * @param paramMap the data store parameters
+     * @return true if processed files should be deleted
+     */
+    protected boolean isDeleteProcessedFile(final DataStoreParams paramMap) {
+        return getBooleanParam(paramMap, DELETE_PROCESSED_FILE_PARAM, deleteProcessedFile);
+    }
+
+    /**
+     * Determines whether a DataStoreException during processing is ignored.
+     *
+     * @param paramMap the data store parameters
+     * @return true if the exception should be ignored
+     */
+    protected boolean isIgnoreDataStoreException(final DataStoreParams paramMap) {
+        return getBooleanParam(paramMap, IGNORE_DATA_STORE_EXCEPTION_PARAM, ignoreDataStoreException);
+    }
+
+    /**
+     * Reads a boolean parameter, falling back to the given default when it is absent or blank.
+     *
+     * @param paramMap the data store parameters
+     * @param key the parameter name
+     * @param defaultValue the value to use when the parameter is not set
+     * @return the resolved boolean value
+     */
+    protected boolean getBooleanParam(final DataStoreParams paramMap, final String key, final boolean defaultValue) {
+        final String value = paramMap.getAsString(key);
+        if (StringUtil.isBlank(value)) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
     @Override
     protected void storeData(final DataConfig dataConfig, final IndexUpdateCallback callback, final DataStoreParams paramMap,
             final Map<String, String> scriptMap, final Map<String, Object> defaultDataMap) {
@@ -124,11 +166,11 @@ public class CsvListDataStore extends CsvDataStore {
                     hasHeaderLine);
 
             // delete csv file
-            if (deleteProcessedFile && !csvFile.delete()) {
+            if (isDeleteProcessedFile(paramMap) && !csvFile.delete()) {
                 logger.warn("Failed to delete {}", csvFile.getAbsolutePath());
             }
         } catch (final DataStoreException e) {
-            if (!ignoreDataStoreException) {
+            if (!isIgnoreDataStoreException(paramMap)) {
                 throw e;
             }
             logger.error("Failed to process {}", csvFile.getAbsolutePath(), e);
