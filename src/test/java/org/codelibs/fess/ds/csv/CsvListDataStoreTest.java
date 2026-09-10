@@ -693,14 +693,17 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         final org.codelibs.fess.helper.CrawlerStatsHelper crawlerStatsHelper = new org.codelibs.fess.helper.CrawlerStatsHelper();
         crawlerStatsHelper.init();
         org.codelibs.fess.util.ComponentUtil.register(crawlerStatsHelper, "crawlerStatsHelper");
-        // The test container only includes convention.xml/lastaflute.xml (not Fess's fess_se.xml), so the
-        // "groovy" engine convertValue() relies on is otherwise absent; register it the same way production
-        // DI does (fess_se.xml + fess_se++.xml) so the documented row-filtering scripts actually evaluate.
+        // The test container only includes convention.xml/lastaflute.xml (not Fess's fess_se.xml), so no
+        // script engine is present; register one the same way production DI does (fess_se.xml +
+        // fess_se++.xml) so the documented row-filtering scripts actually evaluate. Groovy now lives in
+        // the fess-script-groovy plugin, so the tests use the JavaScript engine that ships in fess core
+        // and name it through script_type, which a data store otherwise resolves to the legacy "groovy".
         final org.codelibs.fess.script.ScriptEngineFactory scriptEngineFactory = new org.codelibs.fess.script.ScriptEngineFactory();
         org.codelibs.fess.util.ComponentUtil.register(scriptEngineFactory, "scriptEngineFactory");
-        final org.codelibs.fess.script.groovy.GroovyEngine groovyEngine = new org.codelibs.fess.script.groovy.GroovyEngine();
-        groovyEngine.init();
-        groovyEngine.register();
+        final org.codelibs.fess.script.javascript.JavaScriptEngine javaScriptEngine =
+                new org.codelibs.fess.script.javascript.JavaScriptEngine();
+        javaScriptEngine.init();
+        javaScriptEngine.register();
     }
 
     /** Writes the given text to a temporary .csv file that the caller must delete. */
@@ -719,6 +722,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         try {
             final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
             final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            paramMap.put("script_type", "javascript");
             final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
             scriptMap.put("url", "\"http://example.com/\" + id");
             scriptMap.put("title", "name");
@@ -741,6 +745,7 @@ public class CsvListDataStoreTest extends UnitDsTestCase {
         try {
             final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
             final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            paramMap.put("script_type", "javascript");
             paramMap.put("delete_processed_file", "false");
             final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
             scriptMap.put("url", "\"http://example.com/\" + id");
