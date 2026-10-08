@@ -532,7 +532,14 @@ public class CsvDataStore extends AbstractDataStore {
             final String value = paramMap.getAsString(IGNORE_LINE_PATTERNS_PARAM);
             if (StringUtil.isNotBlank(value)) {
                 // 正規表現による無視する行パターンを設定します。(この例では # で始まる行)
-                csvConfig.setIgnoreLinePatterns(Pattern.compile(value));
+                if (csvConfig.isIgnoreEmptyLines()) {
+                    // orangesignal-csv は、無視した行の直後の空行で読込みを終了してしまうため(以降の行が全て失われる)、
+                    // 両方を指定した場合は、空行(空白のみの行を含む)も行パターンとして無視します。
+                    csvConfig.setIgnoreEmptyLines(false);
+                    csvConfig.setIgnoreLinePatterns(Pattern.compile("(?:" + value + ")|^\\s*$"));
+                } else {
+                    csvConfig.setIgnoreLinePatterns(Pattern.compile(value));
+                }
             }
         }
 

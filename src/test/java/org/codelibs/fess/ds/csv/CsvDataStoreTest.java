@@ -318,6 +318,56 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertNotNull(config.getIgnoreLinePatterns());
     }
 
+    private java.util.List<java.util.List<String>> readRows(final String csv, final com.orangesignal.csv.CsvConfig config)
+            throws Exception {
+        final java.util.List<java.util.List<String>> rows = new java.util.ArrayList<>();
+        try (com.orangesignal.csv.CsvReader reader = new com.orangesignal.csv.CsvReader(new java.io.StringReader(csv), config)) {
+            java.util.List<String> row;
+            while ((row = reader.readValues()) != null) {
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
+    @Test
+    public void test_buildCsvConfig_ignore_line_patterns_with_ignore_empty_lines() throws Exception {
+        // orangesignal-csv stops reading at an empty line that follows an ignored line when both options are on,
+        // so every row after a comment line and a blank line was lost without any message
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("ignore_line_patterns", "^#.*");
+        paramMap.put("ignore_empty_lines", "true");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        final String csv = "#comment\n\nid,name\n1,a\n   \n#more\n\n2,b\n\n";
+        assertEquals(java.util.List.of(java.util.List.of("id", "name"), java.util.List.of("1", "a"), java.util.List.of("2", "b")),
+                readRows(csv, config));
+    }
+
+    @Test
+    public void test_buildCsvConfig_ignore_line_patterns_alone_keeps_empty_lines() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("ignore_line_patterns", "^#.*");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        assertFalse(config.isIgnoreEmptyLines());
+        assertEquals(java.util.List.of(java.util.List.of("id", "name"), java.util.List.of(""), java.util.List.of("1", "a")),
+                readRows("#comment\nid,name\n\n1,a", config));
+    }
+
+    @Test
+    public void test_buildCsvConfig_ignore_empty_lines_alone_is_unchanged() throws Exception {
+        final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+        paramMap.put("ignore_empty_lines", "true");
+
+        final com.orangesignal.csv.CsvConfig config = dataStore.buildCsvConfig(paramMap);
+
+        assertTrue(config.isIgnoreEmptyLines());
+        assertNull(config.getIgnoreLinePatterns());
+    }
+
     @Test
     public void test_getCsvFileList_nonexistent_directory() {
         org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
@@ -657,7 +707,8 @@ public class CsvDataStoreTest extends UnitDsTestCase {
         assertEquals('\'', config.getQuote());
         assertEquals('\\', config.getEscape());
         assertEquals(3, config.getSkipLines());
-        assertTrue(config.isIgnoreEmptyLines());
+        // folded into the line patterns, see test_buildCsvConfig_ignore_line_patterns_with_ignore_empty_lines
+        assertFalse(config.isIgnoreEmptyLines());
         assertTrue(config.isIgnoreLeadingWhitespaces());
         assertTrue(config.isIgnoreTrailingWhitespaces());
         assertFalse(config.isQuoteDisabled());
