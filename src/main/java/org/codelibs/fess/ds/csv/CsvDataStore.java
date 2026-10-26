@@ -265,16 +265,28 @@ public class CsvDataStore extends AbstractDataStore {
         final String scriptType = getScriptType(paramMap);
         final String urlFieldName = ComponentUtil.getFessConfig().getIndexFieldUrl();
         int noUrlCount = 0;
+        int replacementRowCount = 0;
+        int firstReplacementLine = 0;
         CsvReader csvReader = null;
         try {
             csvReader = new CsvReader(new BufferedReader(new InputStreamReader(new FileInputStream(csvFile), csvFileEncoding)), csvConfig);
             List<String> headerList = null;
             if (hasHeaderLine) {
                 headerList = csvReader.readValues();
+                if (containsReplacementChar(headerList)) {
+                    replacementRowCount++;
+                    firstReplacementLine = csvReader.getStartLineNumber();
+                }
             }
             List<String> list;
             boolean loop = true;
             while ((list = csvReader.readValues()) != null && loop && alive) {
+                if (containsReplacementChar(list) && replacementRowCount++ == 0) {
+                    firstReplacementLine = csvReader.getStartLineNumber();
+                }
+                if (csvReader.isEndOfFile() && isUnterminatedQuote(list, csvConfig)) {
+                    reportUnterminatedQuote(dataConfig, csvFile, csvReader.getStartLineNumber());
+                }
                 final StatsKeyObject statsKey = new StatsKeyObject(csvFile.getAbsolutePath() + "#" + csvReader.getLineNumber());
                 paramMap.put(Constants.CRAWLER_STATS_KEY, statsKey);
                 final Map<String, Object> dataMap = new HashMap<>(defaultDataMap);
@@ -395,6 +407,16 @@ public class CsvDataStore extends AbstractDataStore {
                     sleep(readInterval);
                 }
             }
+            if (replacementRowCount > 0) {
+                // The decoder replaces bytes that are not valid in the encoding with U+FFFD and
+                // carries on, so the rows are indexed with garbled text and nothing else says so.
+                // Only counts and positions are logged, never the cell contents.
+                logger.warn(
+                        "{} row(s) in {} (first at line {}) contain U+FFFD replacement characters. "
+                                + "The file is probably not valid {}; check {} of data config {}.",
+                        replacementRowCount, csvFile.getAbsolutePath(), firstReplacementLine, csvFileEncoding, CSV_FILE_ENCODING_PARAM,
+                        getConfigName(dataConfig));
+            }
             if (noUrlCount > 0) {
                 logger.warn("Skipped {} row(s) in {} because the script did not set the {} field.", noUrlCount, csvFile.getAbsolutePath(),
                         urlFieldName);
@@ -404,6 +426,66 @@ public class CsvDataStore extends AbstractDataStore {
         } finally {
             CloseableUtil.closeQuietly(csvReader);
         }
+    }
+
+    /**
+     * Checks whether any value contains U+FFFD, which is what the decoder substitutes for a byte
+     * sequence that is not valid in the configured encoding.
+     *
+     * @param values the values of one record, may be {@code null}
+     * @return {@code true} if a value contains the replacement character
+     */
+    protected boolean containsReplacementChar(final List<String> values) {
+        if (values == null) {
+            return false;
+        }
+        for (final String value : values) {
+            if (value != null && value.indexOf('\uFFFD') >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether the record that ended the file is an unterminated quoted field. The parser
+     * does not fail on a quote that never closes: it keeps the opening quote in the value and
+     * takes the rest of the file as part of that one field. A properly closed quoted field has
+     * its quotes removed, so a last value that still starts with the quote character and holds an
+     * odd number of them is the sign.
+     *
+     * @param values the values of the last record
+     * @param csvConfig the CSV configuration in use
+     * @return {@code true} if the last value looks like an unterminated quoted field
+     */
+    protected boolean isUnterminatedQuote(final List<String> values, final CsvConfig csvConfig) {
+        if (csvConfig.isQuoteDisabled() || values == null || values.isEmpty()) {
+            return false;
+        }
+        final String value = values.get(values.size() - 1);
+        if (value == null) {
+            return false;
+        }
+        final char quote = csvConfig.getQuote();
+        return value.stripLeading().indexOf(quote) == 0 && value.chars().filter(c -> c == quote).count() % 2 == 1;
+    }
+
+    /**
+     * Reports an unterminated quote: a warning, and a failure URL since the rows that follow
+     * the opening quote were not read as rows of their own.
+     */
+    private void reportUnterminatedQuote(final DataConfig dataConfig, final File csvFile, final int line) {
+        logger.warn(
+                "Unterminated quote at line {} of {} (data config {}): the rest of the file was read as part of one field, "
+                        + "so the rows after that line were not indexed as separate rows.",
+                line, csvFile.getAbsolutePath(), getConfigName(dataConfig));
+        final DataStoreException e = new DataStoreException("Unterminated quote at line " + line + " of " + csvFile.getAbsolutePath());
+        ComponentUtil.getComponent(FailureUrlService.class)
+                .store(dataConfig, e.getClass().getCanonicalName(), csvFile.getAbsolutePath() + ":" + line, e);
+    }
+
+    private String getConfigName(final DataConfig dataConfig) {
+        return dataConfig != null ? dataConfig.getName() : null;
     }
 
     /**
