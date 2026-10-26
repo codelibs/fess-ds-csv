@@ -1056,4 +1056,119 @@ public class CsvDataStoreTest extends UnitDsTestCase {
             csvFile.delete();
         }
     }
+
+    /** Runs the action with an appender on CsvDataStore's logger (forced to WARN) and returns the messages. */
+    private java.util.List<String> captureLogs(final Runnable action) {
+        final java.util.List<String> messages = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        final org.apache.logging.log4j.core.appender.AbstractAppender appender =
+                new org.apache.logging.log4j.core.appender.AbstractAppender("csvDataStoreCapture", null, null, true,
+                        org.apache.logging.log4j.core.config.Property.EMPTY_ARRAY) {
+                    @Override
+                    public void append(final org.apache.logging.log4j.core.LogEvent event) {
+                        messages.add(event.getMessage().getFormattedMessage());
+                    }
+                };
+        appender.start();
+        final org.apache.logging.log4j.core.Logger coreLogger =
+                (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getLogger(CsvDataStore.class);
+        final org.apache.logging.log4j.Level originalLevel = coreLogger.getLevel();
+        coreLogger.addAppender(appender);
+        coreLogger.setLevel(org.apache.logging.log4j.Level.WARN);
+        try {
+            action.run();
+        } finally {
+            coreLogger.setLevel(originalLevel);
+            coreLogger.removeAppender(appender);
+            appender.stop();
+        }
+        return messages;
+    }
+
+    /** Registers a FailureUrlService that only remembers "errorName @ url". */
+    private java.util.List<String> registerFailureUrlRecorder() {
+        final java.util.List<String> failureUrls = new java.util.ArrayList<>();
+        ComponentUtil.register(new org.codelibs.fess.app.service.FailureUrlService() {
+            @Override
+            public org.codelibs.fess.opensearch.config.exentity.FailureUrl store(
+                    final org.codelibs.fess.opensearch.config.exentity.CrawlingConfig crawlingConfig, final String errorName,
+                    final String url, final Throwable e) {
+                failureUrls.add(errorName + " @ " + url);
+                return null;
+            }
+        }, org.codelibs.fess.app.service.FailureUrlService.class.getCanonicalName());
+        return failureUrls;
+    }
+
+    /** Crawls the given bytes as a CSV file and returns the indexed documents; log messages are added to the given list. */
+    private java.util.List<java.util.Map<String, Object>> crawlBytes(final byte[] content, final String encoding,
+            final java.util.List<String> logMessages) throws Exception {
+        registerCrawlerComponents();
+        final java.io.File csvFile = java.io.File.createTempFile("fess-ds-csv-test-", ".csv");
+        try {
+            java.nio.file.Files.write(csvFile.toPath(), content);
+            final TestIndexUpdateCallback callback = new TestIndexUpdateCallback();
+            final org.codelibs.fess.entity.DataStoreParams paramMap = new org.codelibs.fess.entity.DataStoreParams();
+            paramMap.put("script_type", "javascript");
+            final java.util.Map<String, String> scriptMap = new java.util.LinkedHashMap<>();
+            scriptMap.put("url", "\"http://example.com/\" + id");
+            scriptMap.put("title", "name");
+            logMessages.addAll(captureLogs(
+                    () -> dataStore.processCsv(new org.codelibs.fess.opensearch.config.exentity.DataConfig(), callback, paramMap, scriptMap,
+                            new java.util.HashMap<>(), dataStore.buildCsvConfig(paramMap), csvFile, 0L, encoding, true)));
+            return callback.dataMapList;
+        } finally {
+            csvFile.delete();
+        }
+    }
+
+    @Test
+    public void test_processCsv_warns_about_invalid_bytes_for_the_encoding() throws Exception {
+        final java.util.List<String> failureUrls = registerFailureUrlRecorder();
+        final java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        out.write("id,name\n1,alice\n2,b".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        out.write(new byte[] { (byte) 0xff, (byte) 0xfe });
+        out.write("d\n3,carol\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        final java.util.List<String> logs = new java.util.ArrayList<>();
+
+        final java.util.List<java.util.Map<String, Object>> docs = crawlBytes(out.toByteArray(), "UTF-8", logs);
+
+        // Behaviour is unchanged: every row is still indexed.
+        assertEquals(3, docs.size());
+        assertTrue("the invalid bytes must be reported once with a count and the first line: " + logs,
+                logs.stream()
+                        .filter(m -> m.startsWith("1 row(s) in ") && m.contains("(first at line 3)") && m.contains("file_encoding"))
+                        .count() == 1);
+        assertTrue("cell contents must not be logged: " + logs, logs.stream().noneMatch(m -> m.contains("alice") || m.contains("carol")));
+        assertEquals(0, failureUrls.size());
+    }
+
+    @Test
+    public void test_processCsv_valid_input_logs_no_warning() throws Exception {
+        registerFailureUrlRecorder();
+        final java.util.List<String> logs = new java.util.ArrayList<>();
+
+        final java.util.List<java.util.Map<String, Object>> docs = crawlBytes(
+                "id,name\n1,\"a, b\"\n2,\"he said \"\"hi\"\"\"\n3,\"multi\nline\"\n".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                "UTF-8", logs);
+
+        assertEquals(3, docs.size());
+        assertEquals("no warning expected: " + logs, 0, logs.size());
+    }
+
+    @Test
+    public void test_processCsv_reports_unterminated_quote() throws Exception {
+        final java.util.List<String> failureUrls = registerFailureUrlRecorder();
+        final java.util.List<String> logs = new java.util.ArrayList<>();
+
+        final java.util.List<java.util.Map<String, Object>> docs =
+                crawlBytes("id,name\n1,alice\n2,\"bob\n3,carol\n4,dave\n".getBytes(java.nio.charset.StandardCharsets.UTF_8), "UTF-8", logs);
+
+        // Behaviour is unchanged: the rows after the opening quote still end up in one document.
+        assertEquals(2, docs.size());
+        assertTrue("the unterminated quote must be named with its line: " + logs,
+                logs.stream().anyMatch(m -> m.startsWith("Unterminated quote at line 3 of ")));
+        assertTrue("cell contents must not be logged: " + logs, logs.stream().noneMatch(m -> m.contains("carol")));
+        assertEquals(1, failureUrls.size());
+        assertTrue(failureUrls.toString(), failureUrls.get(0).endsWith(":3"));
+    }
 }
